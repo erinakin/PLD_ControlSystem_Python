@@ -32,11 +32,12 @@ def withConnectedXPS(fcn):
 
 class NewportXPS:
     gather_header = '# XPS Gathering Data\n#--------------'
+    
     def __init__(self, host, group=None,
                  username='Administrator', password='Administrator',
                  port=5001, timeout=10, extra_triggers=0,
                  outputs=('CurrentPosition', 'SetpointPosition')):
-
+        
         self.host = host
         self.port = port
         self.username = username
@@ -71,7 +72,12 @@ class NewportXPS:
 
     @withConnectedXPS
     def status_report(self):
-        """return printable status report"""
+        """return printable status report showing:
+          the hardware status, positioner errors, XPS host, firmware version,
+
+        Returns:
+            _type_: _description_
+        """
         err, uptime = self._xps.ElapsedTimeGet(self._sid)
         self.check_error(err, msg="Elapsed Time")
         boottime = time.time() - uptime
@@ -100,6 +106,11 @@ class NewportXPS:
 
 
     def connect(self):
+        """connect to XPS controller
+
+        Raises:
+            XPSException: _description_
+        """
         self._sid = self._xps.TCP_ConnectToServer(self.host,
                                                   self.port, self.timeout)
         try:
@@ -111,7 +122,7 @@ class NewportXPS:
         self.firmware_version = val
         self.ftphome = ''
 
-        if any([m in self.firmware_version for m in ['XPS-D', 'HXP-D']]):
+        if any([m in self.firmware_version for m in ['XPS-D', 'HXP-D', 'XPS-RL-D']]):
             err, val = self._xps.Send(self._sid, 'InstallerVersionGet(char *)')
             self.firmware_version = val
             self.ftpconn = SFTPWrapper(**self.ftpargs)
@@ -122,10 +133,20 @@ class NewportXPS:
         try:
             self.read_systemini()
         except:
-            print("Could not read system.ini!!!")
+             print("Could not read system.ini!!!")
 
 
     def check_error(self, err, msg='', with_raise=True):
+        """check for errors, print message and description if error is non-zero
+
+        Args:
+            err (_type_): _description_
+            msg (str, optional): _description_. Defaults to ''.
+            with_raise (bool, optional): _description_. Defaults to True.
+
+        Raises:
+            XPSException: _description_
+        """
         if err != 0:
             err = "%d" % err
             desc = self._xps.errorcodes.get(err, 'unknown error')
@@ -155,7 +176,30 @@ class NewportXPS:
         self.ftpconn.save('stages.ini', fname)
         self.ftpconn.close()
 
+    def print_stagesini(self):
+        """Print the contents of stages.ini"""
+
+        # Connect to the FTP server
+        self.ftpconn.connect(**self.ftpargs)
+    
+    
+        # Change the directory to 'Config' where the stages.ini file is located
+        self.ftpconn.cwd(posixpath.join(self.ftphome, 'Config'))
+        contents = self.ftpconn.getlines('stages.ini')
+        stageinitxt = '\n'.join([line.strip() for line in contents])
+        
+        # Open the stages.ini file for reading
+        self.ftpconn.getlines('stages.ini')
+           
+
+        # Print the contents
+        print(stageinitxt)
+
+        # Close the FTP connection
+        self.ftpconn.close()
+
     def read_systemini(self):
+        """read system.ini from XPS"""
         """read group info from system.ini
         this is part of the connection process
         """
@@ -169,9 +213,10 @@ class NewportXPS:
         self.stages= {}
         self.groups = {}
         sconf = ConfigParser()
-        sconf.readfp(StringIO(initext))
+        sconf.read_file(StringIO(initext))
 
         # read and populate lists of groups first
+        # 
         for gtype, glist in sconf.items('GROUPS'): # ].items():
             if len(glist) > 0:
                 for gname in glist.split(','):
@@ -682,6 +727,7 @@ class NewportXPS:
         self.check_error(err, msg="Moving stage '%s'" % (stage))
         return ret
 
+    # Check the Stage Actual current position in reality
     @withConnectedXPS
     def get_stage_position(self, stage):
         """
@@ -699,6 +745,26 @@ class NewportXPS:
         return val
 
     read_stage_position = get_stage_position
+
+    # Check the Stage Set position in theory
+    @withConnectedXPS
+    def get_stage_set_position(self, stage):
+        """
+        return set stage position
+
+        Parameters:
+           stage (string): name of stage -- must be in self.stages
+        """
+        if stage not in self.stages:
+            print("Stage '%s' not found: " % stage)
+            return
+
+        err, val = self._xps.GroupPositionSetpointGet(self._sid, stage, 1)
+        self.check_error(err, msg="Get Set Stage Position '%s'" % (stage))
+        return val
+
+    read_stage_set_position = get_stage_set_position    
+
 
     @withConnectedXPS
     def reboot(self, reconnect=True, timeout=120.0):

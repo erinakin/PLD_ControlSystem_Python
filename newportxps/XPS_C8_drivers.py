@@ -602,7 +602,7 @@ class XPS:
         return retList
 
 
-    # GroupCurrentFollowingErrorGet :  Return current following errors
+    # get FollowingErrorGet :  Return current following errors
     def GroupCurrentFollowingErrorGet (self, socketId, GroupName, nbElement):
         command = 'GroupCurrentFollowingErrorGet(' + GroupName + ','
         for i in range(nbElement):
