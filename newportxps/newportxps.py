@@ -97,6 +97,7 @@ class NewportXPS:
             out.append("%s (%s), Status: %s" %
                        (groupname, this['category'], status))
             for pos in this['positioners']:
+                out.append('Stages:')
                 stagename = '%s.%s' % (groupname, pos)
                 stage = self.stages[stagename]
                 out.append("   %s (%s)"  % (stagename, stage['stagetype']))
@@ -642,6 +643,7 @@ class NewportXPS:
                     min_jerktime=None, max_jerktime=None):
         """
         set velocity for stage
+        Defaut Settings: Velocity-5oo Units/s, Acceleration-2000 Units/s^2, 
         """
         if stage not in self.stages:
             print("Stage '%s' not found" % stage)
