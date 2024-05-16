@@ -639,7 +639,7 @@ class NewportXPS:
         return out
 
     @withConnectedXPS
-    def set_velocity(self, stage, velo, accl=None,
+    def set_velocity_parameters(self, stage, velo, accl=None,
                     min_jerktime=None, max_jerktime=None):
         """
         set velocity for stage
