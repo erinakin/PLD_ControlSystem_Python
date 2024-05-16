@@ -22,21 +22,26 @@ class MotionController(NewportXPS):
         """
         return self.status_report()
 
-    def initialize_and_home(self):
+    def initialize_and_home(self, home=True):
         """
-        Initialize and home the motion controller.
+        Initialize all the groups and home the motion controller.
         """
         
         for g in self.groups:
             try:
-                self.initialize_group(group=g)
+                self.initialize_group(group=g, home=home)
                 
             except XPSException:
                 print(f" '{g}' already initialized so will kill and reinitialize ")
                 self.kill_group(group=g)
                 self.initialize_group(group=g)
+                self.home_group(group=g)
             
-
+    def stop_controller(self, group=None):
+        """
+        Stop the motion controller.
+        """
+        self.kill_group(group=group)
 
     def set_position(self, stage: str, position: float, relative: bool = False):
         """
@@ -47,47 +52,37 @@ class MotionController(NewportXPS):
             position (float): The target position.
             relative (bool): Whether the move is relative or absolute. Default is False.
         """
-        # Print all groups configured on the controller
-        for sname, info in self.stages.items():
-            sname, self.get_stage_position(sname)
+        # To extract the name of the stages (sname)
+        # sname in self.stages.items()
+        
         self.move_stage(stage, position, relative=relative)
+        return print('The position is now set to', self.get_position(stage), 'Units')
 
-    def set_velocity_parameters(self, stage: str, velocity: float, acceleration: float = None,
-                                min_jerktime: float = None, max_jerktime: float = None):
+    def set_velocity(self, stage: str, velocity: float):
         """
         Set the velocity parameters for the specified stage.
 
         Args:
             stage (str): The name of the stage.
             velocity (float): The target velocity.
-            acceleration (float): The target acceleration. If None, uses the current acceleration.
-            min_jerktime (float): The minimum jerk time. If None, uses the current value.
-            max_jerktime (float): The maximum jerk time. If None, uses the current value.
+           
         """
-        self.set_velocity(stage, velocity, acceleration, min_jerktime, max_jerktime)
+        self.set_velocity(stage, velocity)
+        return print('The velocity is now set to', self.get_velocity(stage), 'Units/sec')
 
-    def stop_controller(self):
-        """
-        Stop the motion controller.
-        """
-        self.kill_group()
-
-    def set_parameter(self, parameter: Literal["Velocity", "Position"], value: Any):
-        """
-        Set the specified parameter value.
+    def get_position(self, stage: str):
+        """_summary_
 
         Args:
-            parameter (Literal["Velocity", "Position"]): The parameter to set.
-            value (Any): The value to set for the parameter.
-        """
-        if parameter == "Velocity":
-            self._velocity = value
-        elif parameter == "Position":
-            self._position = value
-        else:
-            raise ValueError("Invalid parameter name.")
+            stage (str): The name of the stage.
 
-    def get_parameter(self, parameter: Literal["Velocity", "Position"]) -> Any:
+        Returns:
+            _type_: _description_
+        """
+        
+        return print('The current position of',stage, 'is', self.get_stage_position(stage))
+        
+    def get_velocity(self, stage:str):
         """
         Get the value of the specified parameter.
 
@@ -102,7 +97,7 @@ class MotionController(NewportXPS):
         elif parameter == "Position":
             return self._position
         else:
-            raise ValueError("Invalid parameter name.")
+            raise ValueError("Invalid parameter name.")    
 
 # Example usage:
 if __name__ == "__main__":
