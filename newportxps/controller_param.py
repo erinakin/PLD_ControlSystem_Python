@@ -1,5 +1,3 @@
-
-
 from newportxps.newportxps import NewportXPS
 from newportxps.XPS_C8_drivers import XPSException
 from typing import Any, Literal
@@ -15,7 +13,7 @@ class MotionController(NewportXPS):
         # Note that the following attributes are not part of the NewportXPS class
         
 
-    def show_status(self) -> str:
+    def show_status(self):
         """
         Show the status report of the motion controller.
         """
@@ -35,6 +33,7 @@ class MotionController(NewportXPS):
                 self.kill_group(group=g)
                 self.initialize_group(group=g)
                 self.home_group(group=g)
+        return self.status_report()
             
     def stop_controller(self, group=None):
         """
@@ -99,7 +98,7 @@ class MotionController(NewportXPS):
         return print('The current velocity of', stage, 'is', v_cur, 'Units/sec')
     
 
-# Example usage:
+
 if __name__ == "__main__":
     import sys
     hostip = sys.argv[1]
