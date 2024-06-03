@@ -3,145 +3,102 @@ import time
 
 class AttenuatorControls:
     """
-    A class to control the attenuator via serial commands to an Arduino.
-
-    Attributes:
-        ser (serial.Serial): Serial communication object.
-        steps_rotate_per_rev (int): Steps required for one revolution.
-        max_angle (int): Maximum allowed angle for attenuator.
-        steps_per_deg (int): Steps per degree.
-        steps_max_angle (int): Steps to maximum angle.
-        curr_angle (float): Current angle.
-        dest_angle (float): Destination angle.
-        angle_rotate (float): Degrees to rotate to reach destination angle.
-        steps_rotate (int): Steps to rotate to reach destination.
-        calibration_counter (int): Calibration counter.
-        command (str): Command from user.
-        delay (int): Delay in seconds to achieve desired angular velocity.
+    A class to control the laser attenuator via an ATmega328p microcontroller.
+    A pythonized version of preexisting Labview Attenuator VI code.
     """
 
     def __init__(self, port='COM3', baudrate=9600, timeout=1):
+        """
+        Initialize the serial connection to the microcontroller.
+
+        :param port: The COM port to use for the serial connection.
+        :param baudrate: The baud rate for the serial communication.
+        :param timeout: The timeout for the serial communication.
+        """
         self.ser = serial.Serial(port, baudrate, timeout=timeout)
-        self.steps_rotate_per_rev = 1273808
-        self.max_angle = 90
-        self.steps_per_deg = 3538
-        self.steps_max_angle = self.max_angle * self.steps_per_deg
-        self.curr_angle = 0
-        self.dest_angle = -1
-        self.angle_rotate = -1
-        self.steps_rotate = 0
-        self.calibration_counter = 0
-        self.command = ''
-        self.delay = 0
-        self.CW = True
-        self.CCW = False
-        self.MIN_SPEED = 1
-        self.MAX_SPEED = 8
 
-    def set_rotation_speed(self, new_rotation_speed):
+    def send_command(self, command):
         """
-        Calculate the delay in seconds required to achieve the desired rotation speed.
+        Send a command to the microcontroller and read the response.
 
-        Args:
-            new_rotation_speed (float): The new desired rotation speed in degrees per second.
+        :param command: The command string to send.
+        """
+        self.ser.write(command.encode())
+        response = self.ser.readline().decode()
+        print("Response:", response)
+        time.sleep(0.01)  # Slight delay to ensure command is processed
 
-        Returns:
-            int: The delay in seconds to achieve the desired speed or -1 if the speed is invalid.
+    def rotate_to_angle(self, angle):
         """
-        if self.MIN_SPEED <= new_rotation_speed <= self.MAX_SPEED:
-            return int(1 / (self.steps_per_deg * new_rotation_speed))
-        else:
-            print(f"Error: Speed must be between {self.MIN_SPEED} and {self.MAX_SPEED} degrees per second.")
-            return -1
+        Rotate to a specified angle.
 
-    def set_direction(self, direction):
+        :param angle: The angle to rotate to.
         """
-        Send a command to the Arduino to set the rotation direction.
+        #Convert possible float angle to nearest integer angle 
+        angle_int = round(angle)        
 
-        Args:
-            direction (bool): Direction to set (CW for clockwise, CCW for counter-clockwise).
-        """
-        if direction == self.CW:
-            self.ser.write(b'DIR HIGH\n')
-        else:
-            self.ser.write(b'DIR LOW\n')
-
-    def block_laser(self):
-        """
-        Send a command to block the laser path.
-        """
-        self.ser.write(b'LASER_BLOCK LOW\n')
+        command = f',{angle_int}\n'
+        self.send_command(command)
 
     def clear_laser(self):
         """
-        Send a command to clear the laser path.
+        Clear the laser.
         """
-        self.ser.write(b'LASER_BLOCK HIGH\n')
+        command = 'f\n'
+        self.send_command(command)
 
-    def step(self):
+    def block_laser(self):
         """
-        Perform a single step by sending the appropriate commands to the Arduino,
-        then wait for the specified delay.
+        Block the laser.
         """
-        self.ser.write(b'STEP HIGH\n')
-        self.ser.write(b'STEP LOW\n')
-        # Time in seconds
-        time.sleep(self.delay)
-
-    def setup(self):
-        """
-        Initialize the Arduino by sending the INIT command and set the initial rotation speed.
-        """
-        self.ser.write(b'INIT\n')
-        self.delay = self.set_rotation_speed(5)
-        if self.delay == -1:
-            self.delay = self.set_rotation_speed(self.MIN_SPEED)
-
-    def rotate_to(self, angle):
-        """
-        Move the attenuator to a specified angle.
-
-        Args:
-            angle (float): The destination angle in degrees.
-        """
-        if 0 <= angle <= self.max_angle:
-            self.dest_angle = angle
-            if self.dest_angle != self.curr_angle:
-                self.angle_rotate = abs(self.curr_angle - self.dest_angle)
-                self.set_direction(self.CW if self.curr_angle < self.dest_angle else self.CCW)
-                self.curr_angle = self.dest_angle
-                self.steps_rotate = int((self.angle_rotate / self.max_angle) * self.steps_max_angle)
-                
-                self.ser.write(b'\0')
-                for _ in range(self.steps_rotate):
-                    self.step()
-
+        command = 'g\n'
+        self.send_command(command)
 
     def home_attenuator(self):
         """
-        Move the attenuator to the home position.
+        Home the attenuator.
         """
-        self.set_direction(self.CW)
-        while True:
-            self.ser.write(b'\0')
-            if self.ser.read() == b'1':  # Assuming '1' means HOME_SWITCH is triggered
-                self.curr_angle = 0
-                break
-            self.step()
+        command = 'o\n'
+        self.send_command(command)
 
-    def calibrate_attenuator(self):
+    def set_rotation_speed(self, speed):
         """
-        Calibrate the attenuator by counting steps to home position.
+        Set the rotation speed.
+
+        :param speed: The rotation speed in degrees per second.
+        Default speed is 5 degrees per second 
+        Max speed = 8 deg/second 
+        Min speed = 1 deg/second
         """
-        self.set_direction(self.CW)
-        while True:
-            if self.ser.read() == b'1':  # Assuming '1' means HOME_SWITCH is triggered
-                self.ser.write(str(self.calibration_counter).encode())
-                self.calibration_counter = 0
-                break
-            self.step()
-            self.calibration_counter += 1
+        # Convert possible float speed to nearest integer speed
+        speed_int = round(speed)
+        command = f'#{speed_int}\n'
+        self.send_command(command)
+
+    def close(self):
+        """
+        Close the serial connection.
+        """
+        self.ser.close()
+
+def main():
+    # Create an instance of the AttenuatorControls class
+    attenuator = AttenuatorControls()
+
+    
+    angle = 45
+    
+    speed = 5
+
+    # Execute the sequence of operations
+    attenuator.rotate_to_angle(angle)
+    attenuator.clear_laser()
+    attenuator.block_laser()
+    attenuator.home_attenuator()
+    attenuator.set_rotation_speed(speed)
+
+    # Close the serial connection
+    attenuator.close()
 
 if __name__ == "__main__":
-    attenuator = AttenuatorControls()
-    attenuator.setup()
+    main()
