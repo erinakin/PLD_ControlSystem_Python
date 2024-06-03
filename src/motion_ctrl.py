@@ -1,5 +1,5 @@
-from newportxps.newportxps import NewportXPS
-from newportxps.XPS_C8_drivers import XPSException
+from src.newportxps import NewportXPS
+from src.XPS_C8_drivers import XPSException
 from typing import Any, Literal
 
 parameters = Literal["Velocity", "Position"]
