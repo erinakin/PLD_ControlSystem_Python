@@ -24,8 +24,8 @@ class AttenuatorControls:
         :param command: The command string to send.
         """
         self.ser.write(command.encode())
-        response = self.ser.readline().decode()
-        print("Response:", response)
+        # response = self.ser.readline().decode()
+        # print("Response:", response)
         time.sleep(0.01)  # Slight delay to ensure command is processed
 
     def rotate_to_angle(self, angle):
