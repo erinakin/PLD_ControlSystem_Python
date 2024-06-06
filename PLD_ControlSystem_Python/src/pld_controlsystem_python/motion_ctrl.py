@@ -1,8 +1,6 @@
 from PLD_ControlSystem_Python.src.pld_controlsystem_python.newportxps import NewportXPS
 from PLD_ControlSystem_Python.src.pld_controlsystem_python.XPS_C8_drivers import XPSException
-from typing import Any, Literal
 
-parameters = Literal["Velocity", "Position"]
 
 class MotionController(NewportXPS):
     def __init__(self, host, group=None, username='Administrator', password='Administrator',
