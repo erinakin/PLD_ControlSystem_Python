@@ -1,0 +1,5 @@
+{
+    "python.analysis.extraPaths": [
+        "./PLD_ControlSystem_Python/src"
+    ]
+}
