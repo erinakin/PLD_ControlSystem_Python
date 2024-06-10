@@ -3,6 +3,11 @@ from PLD_ControlSystem_Python.src.pld_controlsystem_python.XPS_C8_drivers import
 
 
 class MotionController(NewportXPS):
+    """A class representing a motion controller.
+
+    Args:
+        NewportXPS (type): The base class for the motion controller.
+    """
     def __init__(self, host, group=None, username='Administrator', password='Administrator',
                 port=5001, timeout=10, extra_triggers=0, outputs=('CurrentPosition', 'SetpointPosition')):
         super().__init__(host, group=group, username=username, password=password,
@@ -70,26 +75,26 @@ class MotionController(NewportXPS):
         return self.get_velocity(stage)
 
     def get_position(self, stage: str):
-        """_summary_
+        """Get the current position of the specified stage.
 
         Args:
             stage (str): The name of the stage.
 
         Returns:
-            _type_: _description_
+            float: The current position of the stage.
         """
         
         return print('The current position of',stage, 'is', self.get_stage_position(stage))
         
     def get_velocity(self, stage:str):
         """
-        Get the value of the specified parameter.
+        Get the current velocity of the specified stage.
 
         Args:
-            parameter (Literal["Velocity", "Position"]): The parameter to get.
+            stage (str): The name of the stage.
 
         Returns:
-            Any: The value of the specified parameter.
+            float: The current velocity of the stage.
         """
         if stage not in self.stages:
            print("Stage '%s' not found" % stage)
