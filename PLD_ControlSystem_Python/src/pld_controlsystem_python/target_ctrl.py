@@ -7,7 +7,7 @@ class  TargetControls:
     A pythonized version of preexisting Labview Multi-Target-Carousel-Controler VI code.
     """
 
-    def __init__(self, port='COM2', baudrate=9600, timeout=1):
+    def __init__(self, port='COM7', baudrate=9600, timeout=1):
         """
         Initialize the serial connection to the multi-target carousel controller.
 
@@ -79,7 +79,7 @@ class  TargetControls:
         Begin rastering. Enter raster angle(deg)
         """
         raster_angle_int = round(raster_angle)
-        command = f"s{raster_angle}\n"
+        command = f"s{raster_angle_int}\n"
         self.send_command(command)
 
     def stop_raster(self):

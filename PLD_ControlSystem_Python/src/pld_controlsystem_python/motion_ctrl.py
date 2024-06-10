@@ -20,6 +20,9 @@ class MotionController(NewportXPS):
     def initialize_and_home(self, home=True):
         """
         Initialize all the groups and home the motion controller.
+        Only one Group is used in this case. so we can use the group name as 'Group1.Pos'
+        Inputs: home (bool): Whether to home the stages after initialization. Default is True.
+            
         """
         
         for g in self.groups:
