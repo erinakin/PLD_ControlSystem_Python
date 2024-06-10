@@ -1,65 +1,129 @@
+# This code utilizes the `example_function` from `example-library` by `electronsandstuff`.
+# Source: https://github.com/electronsandstuff/py-pfeiffer-vacuum-protocol/blob/master/src/pfeiffer_vacuum_protocol/pfeiffer_vacuum_protocol.py
+
 import serial
-import time
 
 class VacuumControls:
-    def __init__(self, port='COM6', baudrate=9600, address_of_unit=1):
-        self.port = port
-        self.baudrate = baudrate
-        self.address_of_unit = address_of_unit
-        self.ser = None
-
-    def send_command(self, command):
+    def __init__(self, port='COM6', baudrate=9600):
         """
-        Send a command to the controller and read the response.
+        Initializes the VacuumControls class with the specified serial port and baudrate.
 
-        :param command: The command string to send.
+        Parameters:
+        port (str): The serial port to which the device is connected (e.g., 'COM3' or '/dev/ttyUSB0').
+        baudrate (int): The baud rate for the serial communication (default is 9600).
         """
-        
-        self.ser.write(command.encode())
-        # response = self.ser.readline().decode()
-        # print("Response:", response)
-        time.sleep(0.01)  # Slight delay to ensure command is processed    
+        self.ser = serial.Serial(port, baudrate, timeout=1)
     
-    def initialize(self):
-        try:
-            self.ser = serial.Serial(self.port, self.baudrate, timeout=1)
-            initialize_command = f'INIT {self.address_of_unit}\n'
-            self.ser.write(initialize_command.encode())
-            time.sleep(1)
-            print("Initialization successful")
-        except Exception as e:
-            print(f'Error initializing: {e}')
+    def _send_command(self, command):
+        """
+        Sends a command to the device and reads the response.
 
-    def read_data(self, parameter=0):
-        try:
-            if self.ser is None:
-                raise Exception("Serial port not initialized")
-            
-            read_command = f'READ? {self.address_of_unit} {parameter}\n'
-            self.ser.write(read_command.encode())
-            response = self.ser.readline().decode().strip()
-            return print(response)
-        except Exception as e:
-            print(f'Error reading data: {e}')
+        Parameters:
+        command (str): The command string to be sent.
+
+        Returns:
+        str: The response string from the device.
+        """
+        self.ser.write(f"{command}\r".encode())
+        response = self.ser.readline().decode().strip()
+        return response
+    
+    def read_pressure(self):
+        """
+        Reads the actual pressure value from the device.
+
+        Returns:
+        tuple: A tuple containing the pressure in mbar and Torr (mbar, Torr).
+               Returns (None, None) if no response is received.
+        """
+        response = self._send_command("P740")
+        if response:
+            pressure_mbar = float(response)
+            pressure_torr = pressure_mbar / 1.33322  # Convert mbar to Torr
+            return pressure_mbar, pressure_torr
+        else:
+            return None, None
+
+    def read_error(self):
+        """
+        Reads the actual error code from the device.
+
+        Returns:
+        str: The error code string.
+             Returns None if no response is received.
+        """
+        response = self._send_command("P303")
+        if response:
+            return response
+        else:
             return None
+    
+    def set_pressure(self, option):
+        """
+        Sets the pressure value on the device based on the provided option.
+
+        Parameters:
+        option (str): '0' to set the pressure to 0e-4 mbar, '1' to set the pressure to 2050 mbar.
+
+        Returns:
+        str: The response string from the device.
+
+        Raises:
+        ValueError: If an invalid option is provided.
+        """
+        if option == '0':
+            # Set pressure to 0e-4 mbar
+            command = "S001 0e-4"
+        elif option == '1':
+            # Set pressure to 2050 mbar
+            command = "S001 2050"
+        else:
+            raise ValueError("Invalid option. Use '0' or '1'.")
+        
+        response = self._send_command(command)
+        return response
+    
+    def correction_factor(self, new_factor=None):
+        """
+        Reads or sets the Pirani gas correction factor.
+
+        Parameters:
+        new_factor (float, optional): The new correction factor to be set. If None, the current correction factor is read.
+
+        Returns:
+        float: The current correction factor if new_factor is None.
+        str: The response string from the device if new_factor is provided.
+
+        Raises:
+        ValueError: If the new_factor is out of the acceptable range (0.2 to 8.0).
+        """
+        if new_factor is None:
+            # Read the correction factor
+            response = self._send_command("P742")
+            if response:
+                return float(response)
+            else:
+                return None
+        else:
+            # Set the new correction factor
+            if 0.2 <= new_factor <= 8.0:
+                command = f"S742 {new_factor:.1f}"
+                response = self._send_command(command)
+                return response
+            else:
+                raise ValueError("Correction factor out of range. Must be between 0.2 and 8.0.")
 
     def close(self):
-        if self.ser is not None:
-            self.ser.close()
-            print("Serial port closed")
+        """
+        Closes the serial connection.
+        """
+        self.ser.close()
 
-def mbar_to_torr(mbar):
-    return mbar * 0.750062
-
-if __name__ == "__main__":
-    vc = VacuumControls()
-    vc.initialize()
-    response_mbar = vc.read_data(parameter=0)
-    
-    if response_mbar:
-        response_mbar = float(response_mbar)
-        response_torr = mbar_to_torr(response_mbar)
-        print(f'Response: {response_mbar} mbar')
-        print(f'Response: {response_torr} Torr')
-    
-    vc.close()
+# Example usage:
+# vacuum = VacuumControls(port='COM3')
+# print(vacuum.read_pressure())
+# print(vacuum.read_error())
+# vacuum.set_pressure('0')
+# print(vacuum.correction_factor())
+# vacuum.correction_factor(1.5)
+# vacuum.close()
