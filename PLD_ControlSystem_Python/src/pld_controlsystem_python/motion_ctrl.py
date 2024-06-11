@@ -1,3 +1,6 @@
+# This code utilizes the `NewportXPS` from `newportxps` by `pyepics`.
+# Source: https://github.com/pyepics/newportxps
+
 from PLD_ControlSystem_Python.src.pld_controlsystem_python.newportxps import NewportXPS
 from PLD_ControlSystem_Python.src.pld_controlsystem_python.XPS_C8_drivers import XPSException
 
