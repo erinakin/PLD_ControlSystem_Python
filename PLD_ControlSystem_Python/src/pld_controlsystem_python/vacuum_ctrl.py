@@ -24,11 +24,12 @@ class VacuumControls:
         try:
             pressure_hpa = pvp.read_pressure(self.ser, self.address)
             pressure_torr = pressure_hpa / 1.33322  # Convert hPa to Torr
-            return pressure_hpa, pressure_torr
+            return print(pressure_hpa, 'hPa', pressure_torr, 'Torr') # Return the pressure in hPa and Torr
         except ValueError:
             return None, None
 
 
+ 
     def read_error(self):
         """
         Reads the actual error code from the device.
@@ -43,12 +44,13 @@ class VacuumControls:
         except ValueError:
             return None
     
-    def set_pressure(self, option):
+    def pressure_setpoint(self, option):
         """
         Sets the pressure value on the device based on the provided option.
 
         Parameters:
-        option (str): '0' to set the pressure to 0e-4 mbar, '1' to set the pressure to 2050 mbar.
+        option (str): '0' to set the pressure to 0e-4 hPa for low pressure
+                      '1' to set the pressure to 1000 hPa  for atmospheric pressure.(high pressure)
 
         Returns:
         str: The response string from the device.
@@ -57,9 +59,9 @@ class VacuumControls:
         ValueError: If an invalid option is provided.
         """
         if option == '0':
-            val = 0.00001
+            val = 000
         elif option == '1':
-            val = 2050
+            val = 1
         else:
             raise ValueError("Invalid option. Use '0' or '1'.")
         
