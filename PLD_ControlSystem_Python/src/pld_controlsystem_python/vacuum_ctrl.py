@@ -1,10 +1,8 @@
-# This code utilizes the `example_function` from `example-library` by `electronsandstuff`.
-# Source: https://github.com/electronsandstuff/py-pfeiffer-vacuum-protocol/blob/master/src/pfeiffer_vacuum_protocol/pfeiffer_vacuum_protocol.py
-
 import serial
+from pld_controlsystem_python.pfeiffer_vacuum_protocol import PfeifferVacuumProtocol as pvp
 
 class VacuumControls:
-    def __init__(self, port='COM6', baudrate=9600):
+    def __init__(self, port='COM6', baudrate=9600, address=1):
         """
         Initializes the VacuumControls class with the specified serial port and baudrate.
 
@@ -13,36 +11,23 @@ class VacuumControls:
         baudrate (int): The baud rate for the serial communication (default is 9600).
         """
         self.ser = serial.Serial(port, baudrate, timeout=1)
-    
-    def _send_command(self, command):
-        """
-        Sends a command to the device and reads the response.
-
-        Parameters:
-        command (str): The command string to be sent.
-
-        Returns:
-        str: The response string from the device.
-        """
-        self.ser.write(f"{command}\r".encode())
-        response = self.ser.readline().decode().strip()
-        return response
+        self.address = address
     
     def read_pressure(self):
         """
         Reads the actual pressure value from the device.
 
         Returns:
-        tuple: A tuple containing the pressure in mbar and Torr (mbar, Torr).
+        tuple: A tuple containing the pressure in hPa (equivalent to mbar) and Torr (hPa, Torr).
                Returns (None, None) if no response is received.
         """
-        response = self._send_command("P740")
-        if response:
-            pressure_mbar = float(response)
-            pressure_torr = pressure_mbar / 1.33322  # Convert mbar to Torr
-            return pressure_mbar, pressure_torr
-        else:
+        try:
+            pressure_hpa = pvp.read_pressure(self.ser, self.address)
+            pressure_torr = pressure_hpa / 1.33322  # Convert hPa to Torr
+            return pressure_hpa, pressure_torr
+        except ValueError:
             return None, None
+
 
     def read_error(self):
         """
@@ -52,10 +37,10 @@ class VacuumControls:
         str: The error code string.
              Returns None if no response is received.
         """
-        response = self._send_command("P303")
-        if response:
-            return response
-        else:
+        try:
+            error_code = pvp.read_error_code(self.ser, self.address)
+            return error_code.name  # Return the name of the ErrorCode enum
+        except ValueError:
             return None
     
     def set_pressure(self, option):
@@ -72,16 +57,17 @@ class VacuumControls:
         ValueError: If an invalid option is provided.
         """
         if option == '0':
-            # Set pressure to 0e-4 mbar
-            command = "S001 0e-4"
+            val = 0.00001
         elif option == '1':
-            # Set pressure to 2050 mbar
-            command = "S001 2050"
+            val = 2050
         else:
             raise ValueError("Invalid option. Use '0' or '1'.")
         
-        response = self._send_command(command)
-        return response
+        try:
+            pvp.write_pressure_setpoint(self.ser, self.address, val)
+            return "Pressure setpoint updated successfully."
+        except ValueError as e:
+            return str(e)
     
     def correction_factor(self, new_factor=None):
         """
@@ -98,18 +84,17 @@ class VacuumControls:
         ValueError: If the new_factor is out of the acceptable range (0.2 to 8.0).
         """
         if new_factor is None:
-            # Read the correction factor
-            response = self._send_command("P742")
-            if response:
-                return float(response)
-            else:
+            try:
+                return pvp.read_correction_value(self.ser, self.address)
+            except ValueError:
                 return None
         else:
-            # Set the new correction factor
             if 0.2 <= new_factor <= 8.0:
-                command = f"S742 {new_factor:.1f}"
-                response = self._send_command(command)
-                return response
+                try:
+                    pvp.write_correction_value(self.ser, self.address, new_factor)
+                    return "Correction factor updated successfully."
+                except ValueError as e:
+                    return str(e)
             else:
                 raise ValueError("Correction factor out of range. Must be between 0.2 and 8.0.")
 
@@ -119,11 +104,4 @@ class VacuumControls:
         """
         self.ser.close()
 
-# Example usage:
-# vacuum = VacuumControls(port='COM3')
-# print(vacuum.read_pressure())
-# print(vacuum.read_error())
-# vacuum.set_pressure('0')
-# print(vacuum.correction_factor())
-# vacuum.correction_factor(1.5)
-# vacuum.close()
+
