@@ -156,7 +156,7 @@ class PfeifferVacuumProtocol:
 
         mantissa = int(rdata[:4])
         exponent = int(rdata[4:])
-        return float(mantissa * 10 ** (exponent - 26))
+        return float(mantissa * 10 ** (exponent - 23))
 
     @classmethod
     def write_pressure_setpoint(cls, s, addr, val, valid_char_filter=None):
@@ -172,7 +172,7 @@ class PfeifferVacuumProtocol:
 
     @classmethod
     def read_correction_value(cls, s, addr, valid_char_filter=None):
-        """Read the current correction value used to adjust pressure measurements."""
+        """Read the current Pirani correction value used to adjust pressure measurements."""
         cls._send_data_request(s, addr, 742)
         raddr, rw, rparam_num, rdata = cls._read_gauge_response(s, valid_char_filter=valid_char_filter)
 
@@ -183,9 +183,17 @@ class PfeifferVacuumProtocol:
 
     @classmethod
     def write_correction_value(cls, s, addr, val, valid_char_filter=None):
-        """Set the correction value on the gauge."""
+        """Set the Pirani correction value on the gauge."""
+        # Check if the correction factor is within the valid range (0.2 to 0.8)
+        if not (0.2 <= val <= 8.0):
+            raise ValueError("Correction factor out of range. Must be between 0.2 and 0.8.")
+        
+        # Convert the correction value to an integer and format it as a 6-digit string
         data = "{:06d}".format(int(val * 100))
+
         cls._send_control_command(s, addr, 742, data)
+       
+        # Read the gauge's response
         raddr, rw, rparam_num, rdata = cls._read_gauge_response(s, valid_char_filter=valid_char_filter)
 
         if raddr != addr or rw != 1 or rparam_num != 742:
