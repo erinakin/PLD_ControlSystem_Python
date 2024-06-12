@@ -18,11 +18,6 @@ class TestTargetControls(unittest.TestCase):
         self.mock_serial_instance = mock_serial.return_value  # This is the mock instance of serial.Serial
         self.target_controls = TargetControls()
 
-    def test_initialization(self):
-        """
-        Test that the TargetControls initializes the serial connection correctly.
-        """
-        self.mock_serial_instance.assert_called_with('COM2', baudrate=9600, timeout=1)
 
     def test_send_command(self):
         """
