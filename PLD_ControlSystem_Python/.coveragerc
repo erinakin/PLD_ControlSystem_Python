@@ -2,7 +2,12 @@
 [run]
 branch = True
 source = pld_controlsystem_python
-# omit = bad_file.py
+omit =
+    src/pld_controlsystem_python/debugtime.py
+    src/pld_controlsystem_python/ftp_wrapper.py
+    src/pld_controlsystem_python/newportxps.py
+    src/pld_controlsystem_python/utils.py
+    src/pld_controlsystem_python/XPS_C8_drivers.py
 
 [paths]
 source =
@@ -17,7 +22,7 @@ exclude_lines =
 
     # Don't complain about missing debug-only code:
     def __repr__
-    if self\.debug
+    if self.debug
 
     # Don't complain if tests don't hit defensive assertion code:
     raise AssertionError
@@ -25,4 +30,6 @@ exclude_lines =
 
     # Don't complain if non-runnable code isn't run:
     if 0:
-    if __name__ == .__main__.:
+        pass
+    if __name__ == '__main__':
+        pass
