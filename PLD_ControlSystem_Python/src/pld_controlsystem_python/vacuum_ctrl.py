@@ -9,6 +9,7 @@ class VacuumControls:
         Parameters:
         port (str): The serial port to which the device is connected (e.g., 'COM3' or '/dev/ttyUSB0').
         baudrate (int): The baud rate for the serial communication (default is 9600).
+        address (int): The address of the device (default is 1).
         """
         self.ser = serial.Serial(port, baudrate, timeout=1)
         self.address = address
