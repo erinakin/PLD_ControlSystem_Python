@@ -30,8 +30,6 @@ class eurotherm2408(object):
             - _writeFloat(register, value): Writes a floating-point value to a register.
             - _getattr__(name): Retrieves an attribute value.
             - _setattr__(name, value): Sets an attribute value.
-            - _readRegister(register): Reads a register value.
-            - _writeRegister(register, value): Writes a value to a register.
             - dumpAll(): Dumps all register values into a dictionary.
             - temperature: Property to retrieve the current temperature.
             - remoteSetpoint: Property to retrieve the remote setpoint status.
@@ -512,7 +510,13 @@ class eurotherm2408(object):
         self.floatingPointDataFormat = None
         self._resolutionUpdate_()
 
+    def close(self):
+        """
+        Close the serial connection to the Eurotherm 2408.
 
+        This method closes the serial connection to the Eurotherm 2408 temperature controller.
+        """
+        self.instrument.serial.close()
     #    def __dir__(self):
     #        return super().__dir__()+self._registers.keys()
 
@@ -757,7 +761,7 @@ class eurotherm2408(object):
     @property
     def setpoint(self):
         """
-        Get the target setpoint.
+        Get the target setpoint temperature.
 
         Returns:
             float: The target setpoint value.
@@ -767,7 +771,7 @@ class eurotherm2408(object):
     @setpoint.setter
     def setpoint(self, value):
         """
-        Set the target setpoint value.
+        Set the target setpoint temperature value.
 
         Args:
             value (float): The value to set as the target setpoint.
