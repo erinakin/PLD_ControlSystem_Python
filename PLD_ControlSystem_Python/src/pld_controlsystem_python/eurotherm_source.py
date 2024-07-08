@@ -17,8 +17,63 @@ import math
 
 
 class eurotherm2408(object):
-    def __init__(self, serialPort, slaveAddress=1, baudrate=9600 ):
+    """
+        A class representing an interface to the Eurotherm 2408 temperature controller,
+        providing methods and properties for interaction and control.
 
+         Methods:
+            - reconnect(): Reconnects to the instrument.
+            - _resolutionUpdate_(): Updates the resolution format.
+            - _readRegister(register): Reads a register value.
+            - _writeRegister(register, value): Writes a value to a register.
+            - _readFloat(register): Reads a floating-point value from a register.
+            - _writeFloat(register, value): Writes a floating-point value to a register.
+            - _getattr__(name): Retrieves an attribute value.
+            - _setattr__(name, value): Sets an attribute value.
+            - _readRegister(register): Reads a register value.
+            - _writeRegister(register, value): Writes a value to a register.
+            - dumpAll(): Dumps all register values into a dictionary.
+            - temperature: Property to retrieve the current temperature.
+            - remoteSetpoint: Property to retrieve the remote setpoint status.
+            - setpoint: Property to retrieve and set the target setpoint.
+            - P, I, D: Properties to retrieve and set PID controller parameters.
+            - P2, I2, D2: Properties to retrieve and set secondary PID controller parameters.
+            - power: Property to retrieve and set the power output.
+            - workingSetpoint: Property to retrieve the working setpoint.
+            - manual: Property to retrieve and set the manual mode status.
+            - pid, pid2: Properties to retrieve and set PID parameter tuples.
+            - cutbackHigh, cutbackLow: Properties to retrieve and set cutback values.
+            - automatic: Property to retrieve and set the automatic mode status.
+            - rampRate: Property to retrieve and set the ramp rate.
+            - resolution: Property to retrieve the resolution format.
+            - temperatureSensor: Property to retrieve and set the temperature sensor type.
+            - rampUnit: Property to retrieve and set the ramp rate unit.
+            - timeUnits: Property to retrieve and set the integral and derivative time units.
+            - tensionRange: Property to retrieve and set the electrical output tension range.
+            - decimalsDisp: Property to retrieve and set the number of decimal places in displayed values.
+
+        Notes:
+            - This class provides a Python interface for interacting with the Eurotherm 2408 temperature controller.
+            - It includes methods for reading and writing registers, setting configuration parameters,
+            retrieving process variables, and controlling PID parameters.
+            - Property setters typically involve setting parameters on the device, entering configuration mode,
+            applying changes, exiting configuration mode, waiting for device reset, and reconnecting to ensure
+            proper operation and communication.
+    """
+
+    def __init__(self, serialPort, slaveAddress=1, baudrate=9600 ):
+        """
+        Initializes the Eurotherm 2408 temperature controller.
+
+        This constructor sets up the communication parameters for the Eurotherm 2408 controller and initializes
+        the register maps and other attributes.
+
+        Args:
+            serialPort (str): The serial port to which the Eurotherm 2408 is connected.
+            slaveAddress (int, optional): The slave address of the Eurotherm 2408. Default is 1.
+            baudrate (int, optional): The baud rate for the serial communication. Default is 9600.
+        """
+        # Register list
         # Keep this first in the class
         # 
         self._registers = {
@@ -433,6 +488,15 @@ class eurotherm2408(object):
         self.reconnect()
 
     def reconnect(self):
+        """
+        Reestablish the connection to the Eurotherm 2408 temperature controller.
+
+        This method closes the existing serial connection if it exists and reopens it.
+        It then creates a new instrument instance for communication.
+
+        The method also sets the baud rate for the serial communication and updates
+        the floating point data format used for decoding values from the controller.
+        """
         if self.instrument != None:
             self.instrument.serial.close()
             time.sleep(1)
@@ -453,12 +517,41 @@ class eurotherm2408(object):
     #        return super().__dir__()+self._registers.keys()
 
     def _resolutionUpdate_(self):
+        """
+        Update the floating point data format for decoding values from the controller.
+
+        This method guesses the floating point data format by reading the corresponding register from the
+        Eurotherm 2408. It sets the `floatingPointDataFormat` attribute to the value read from the register.
+        If debugging is enabled, it prints a message indicating that the data format is being guessed.
+        """
         if self.debugPrint: print("Guessing of the floating point data format")
         self.floatingPointDataFormat= self.instrument.read_register(self._registers["AA_Comms_Resolution"], 0)
 
 
 
     def __getattr__(self, name):
+        """
+        Handle attribute access for the Eurotherm 2408.
+
+        This method intercepts attribute access and attempts to read the corresponding register
+        from the Eurotherm 2408 if the attribute name matches a register name. If the register
+        exists, it reads the value from the register and returns it. If debugging is enabled,
+        it prints the value read and the register address.
+
+        If the attribute name does not match any register, it falls back to the default
+        attribute access behavior.
+
+        Args:
+            name (str): The name of the attribute being accessed.
+
+        Returns:
+            The value of the register if the attribute name matches a register, otherwise
+            the attribute value.
+
+        Raises:
+            AttributeError: If the attribute does not exist.
+            Exception: For any other errors during attribute access.
+        """
         try:
             if name in self._registers:
                 val = self._readRegister(self._registers[name])
@@ -472,6 +565,24 @@ class eurotherm2408(object):
             if self.debugPrint: print(str(e))
 
     def __setattr__(self, name, value):
+        """
+        Handle attribute setting for the Eurotherm 2408.
+
+        This method intercepts attribute setting and attempts to write the value to the corresponding
+        register on the Eurotherm 2408 if the attribute name matches a register name. If the register
+        exists, it writes the value to the register and removes the attribute from the instance dictionary.
+        If debugging is enabled, it prints the value being written and the register address.
+
+        If the attribute name does not match any register, it falls back to the default attribute setting behavior.
+
+        Args:
+            name (str): The name of the attribute being set.
+            value: The value to set for the attribute.
+
+        Raises:
+            AttributeError: If the attribute does not exist or is read-only.
+            Exception: For any other errors during attribute setting.
+        """
         notDone = True
         while notDone:
             try:
@@ -494,6 +605,23 @@ class eurotherm2408(object):
 
 
     def _readRegister(self, register):
+        """
+        Read a value from a specified register on the Eurotherm 2408.
+
+        This method attempts to read a value from the given register, handling both
+        floating-point and integer data formats. If the floating-point data format is
+        not yet determined, it updates the resolution. It retries reading up to a
+        maximum number of attempts (`maxRetryReadRegister`) if necessary.
+
+        Args:
+            register (int): The register address to read from.
+
+        Returns:
+            float or int or None: The value read from the register, or None if reading fails.
+
+        Raises:
+            Exception: For any errors encountered during register reading.
+        """
         if self.floatingPointDataFormat == None:
             self._resolutionUpdate_()
 
@@ -526,6 +654,21 @@ class eurotherm2408(object):
 
     def _writeRegister(self, register, value):
 
+        """
+        Write a value to a specified register on the Eurotherm 2408.
+
+        This method writes a given value to the specified register, handling both
+        floating-point and integer data formats. If the floating-point data format is
+        not yet determined, it updates the resolution. It ensures the value is of an
+        appropriate type before writing.
+
+        Args:
+            register (int): The register address to write to.
+            value (int or float): The value to be written to the register.
+
+        Raises:
+            Exception: For any errors encountered during register writing.
+        """
         if self.floatingPointDataFormat == None:
             self._resolutionUpdate_()
 
@@ -562,6 +705,16 @@ class eurotherm2408(object):
 
 
     def dumpAll(self):
+        """
+        Dump the values of all registers.
+
+        This method retrieves the values of all registers specified in the 
+        `_registers` dictionary and returns them in a dictionary format.
+
+        Returns:
+            dict: A dictionary where the keys are register names and the values 
+            are the corresponding register values.
+        """    
         res = {}
         for key in self._registers.keys():
             res[key] = self.__getattr__(key)
@@ -580,10 +733,22 @@ class eurotherm2408(object):
 
     @property
     def temperature(self):
+        """
+        Get the current process variable (temperature).
+
+        Returns:
+            float: The current process variable, representing the temperature.
+        """
         return self.Process_Variable
 
     @property
     def remoteSetpoint(self):
+        """
+        Check if the remote setpoint is selected.
+
+        Returns:
+            bool: True if the remote setpoint is selected, False otherwise.
+        """    
         if self.Local_or_remote_setpoint_select == 1.0:
             return True
         else:
@@ -591,11 +756,25 @@ class eurotherm2408(object):
 
     @property
     def setpoint(self):
+        """
+        Get the target setpoint.
+
+        Returns:
+            float: The target setpoint value.
+        """
         return self.Target_setpoint
 
     @setpoint.setter
     def setpoint(self, value):
+        """
+        Set the target setpoint value.
 
+        Args:
+            value (float): The value to set as the target setpoint.
+
+        Raises:
+            ValueError: If the provided value exceeds the high range limit or the high limit.
+        """
         if self.Setpoint_Max___High_range_limit < value:
             #self.Instrument_Mode = 2
             print ("You need to set the Setpoint_Max___High_range_limit Higher in conf mode" )
@@ -610,27 +789,63 @@ class eurotherm2408(object):
 
     @property
     def P(self):
+        """
+        Get the proportional band for PID1.
+
+        Returns:
+            float: The proportional band value for PID1.
+        """
         return self.Proportional_band_PID1
 
     @P.setter
     def P(self, value):
+        """
+        Set the proportional band for PID1.
+
+        Args:
+            value (float): The value to set as the proportional band for PID1.
+        """
         self.Proportional_band_PID1=value
 
     @property
     def I(self):
+        """
+        Get the integral time for PID1.
+
+        Returns:
+            float: The integral time value for PID1.
+        """
         return self.Integral_time_PID1
 
     @I.setter
     def I(self, value):
+        """
+        Set the integral time for PID1.
+
+        Args:
+            value (float): The value to set as the integral time for PID1.
+        """
         self.Integral_time_PID1=value
 
 
     @property
     def D(self):
+        """
+        Get the derivative time for PID1.
+
+        Returns:
+            float: The derivative time value for PID1.
+        """
         return self.Derivative_time_PID1
 
     @D.setter
     def D(self, value):
+        """
+        Set the derivative time for PID1.
+
+        Args:
+            value (float): The value to set as the derivative time for PID1.
+        """
         self.Derivative_time_PID1=value
 
 
@@ -638,45 +853,106 @@ class eurotherm2408(object):
 
     @property
     def P2(self):
+        """
+        Get the proportional band for PID2.
+
+        Returns:
+            float: The proportional band value for PID2.
+        """
         return self.Proportional_band_PID2
 
     @P2.setter
     def P2(self, value):
+        """
+        Set the proportional band for PID2.
+
+        Args:
+            value (float): The value to set as the proportional band for PID2.
+        """
         self.Proportional_band_PID2=value
 
     @property
     def I2(self):
+        """
+        Get the integral time for PID2.
+
+        Returns:
+            float: The integral time value for PID2.
+        """
         return self.Integral_time_PID2
 
     @I2.setter
     def I2(self, value):
+        """
+        Set the integral time for PID2.
+
+        Args:
+            value (float): The value to set as the integral time for PID2.
+        """
         self.Integral_time_PID2=value
 
 
     @property
     def D2(self):
+        """
+        Get the derivative time for PID2.
+
+        Returns:
+            float: The derivative time value for PID2.
+        """
         return self.Derivative_time_PID2
 
     @D2.setter
     def D2(self, value):
+        """
+        Set the derivative time for PID2.
+
+        Args:
+            value (float): The value to set as the derivative time for PID2.
+        """
         self.Derivative_time_PID2=value
 
 
 
     @property
     def power(self):
+        """
+        Get the output power percentage.
+
+        Returns:
+            float: The current output power percentage.
+        """
         return self.pc_Output_power
+    
     @power.setter
     def power(self, value):
+        """
+        Set the output power percentage.
+
+        Args:
+            value (float): The value to set as the output power percentage.
+        """
         self.pc_Output_power = value
 
 
     @property
     def workingSetpoint(self):
+        """
+        Get the working setpoint.
+
+        Returns:
+            float: The current working setpoint.
+        """
         return self.Working_set_point
 
     @property
     def manual(self):
+        """
+        Get the manual mode status.
+
+        Returns:
+            bool: True if in manual mode, False otherwise.
+        """
         if self.Auto_man_select == 1:
             return True
         else:
@@ -684,6 +960,12 @@ class eurotherm2408(object):
 
     @manual.setter
     def manual(self, value):
+        """
+        Set the manual mode status.
+
+        Args:
+            value (bool): True to set manual mode, False to set automatic mode.
+        """
         if value:
             self.Auto_man_select = 1
         else:
@@ -691,51 +973,123 @@ class eurotherm2408(object):
 
     @property
     def pid(self):
+        """
+        Get the PID parameters (P, I, D) for PID1.
+
+        Returns:
+            tuple: A tuple containing the proportional, integral, and derivative parameters for PID1.
+        """
         return (self.P, self.I, self.D)
 
     @pid.setter
     def pid(self,pid):
+        """
+        Set the PID parameters (P, I, D) for PID1.
+
+        Args:
+            pid (tuple): A tuple containing the proportional, integral, and derivative parameters for PID1.
+        """
         (self.P, self.I, self.D) = pid
 
     @property
     def pid2(self):
+        """
+        Get the PID parameters (P, I, D) for PID2.
+
+        Returns:
+            tuple: A tuple containing the proportional, integral, and derivative parameters for PID2.
+        """
         return (self.P2, self.I2, self.D2)
 
     @pid2.setter
     def pid2(self,pid2):
+        """
+        Get the PID parameters (P, I, D) for PID2.
+
+        Returns:
+            tuple: A tuple containing the proportional, integral, and derivative parameters for PID2.
+        """
         (self.P2, self.I2, self.D2) = pid2
 
     @property
     def cutbackHigh(self):
+        """
+        Get the high cutback value for PID1.
+
+        Returns:
+            float: The current high cutback value.
+        """
         return self.Cutback_high_PID1
 
     @cutbackHigh.setter
     def cutbackHigh(self,value):
+        """
+        Set the high cutback value for PID1.
+
+        Args:
+            value (float): The value to set as the high cutback.
+        """
         self.Cutback_high_PID1 = value
 
     @property
     def cutbackLow(self):
+        """
+        Get the low cutback value for PID1.
+
+        Returns:
+            float: The current low cutback value.
+        """
         return self.Cutback_low_PID1
 
     @cutbackLow.setter
     def cutbackLow(self,value):
+        """
+        Set the low cutback value for PID1.
+
+        Args:
+            value (float): The value to set as the low cutback.
+        """
         self.Cutback_low_PID1 = value
 
     @property
     def automatic(self):
+        """
+        Get the automatic mode status.
+
+        Returns:
+            bool: True if in automatic mode, False if in manual mode.
+        """
         return not self.manual
 
     @automatic.setter
     def automatic(self,value):
+        """
+        Set the automatic mode status.
+
+        Args:
+            value (bool): True to set automatic mode, False to set manual mode.
+        """
         self.manual = not value
 
     @property
     def rampRate(self):
+        """
+        Get the ramp rate (setpoint rate limit).
+
+        Returns:
+            float: The current ramp rate (setpoint rate limit).
+        """
         #return self.Ramp_rate
         return self.Setpoint_rate_limit
 
     @rampRate.setter
     def rampRate(self, value):
+        """
+        Set the ramp rate (setpoint rate limit).
+
+        Args:
+            value (float): The value to set as the ramp rate (setpoint rate limit).
+        """
         if self.Ramp_Rate_Disable == 1: print("Warning, ramp rate is disabled. myEuro.Ramp_Rate_Disable = 0 to reactivate.")
         #if self.Setpoint_rate_limit < value : print("Warning, Setpoint_rate_limit is lower than desired ramp rate.")
         self.Setpoint_rate_limit = value
@@ -744,6 +1098,12 @@ class eurotherm2408(object):
 
     @property
     def resolution(self):
+        """
+        Get the resolution setting of the device.
+
+        Returns:
+            str: Either "Full" if the resolution is full or "Integer" if it is integer.
+        """
         if self.AA_Comms_Resolution == 0:
             self.floatingPointDataFormat = 0
             return "Full"
@@ -753,6 +1113,12 @@ class eurotherm2408(object):
 
     @property
     def temperatureSensor(self):
+        """
+        Get the type of temperature sensor configured on the device.
+
+        Returns:
+            str: The type of temperature sensor, such as "J", "K", "RTD", etc.
+        """
         type=self.Input_type
         if type == 0: return "J"
         if type == 1: return "K"
@@ -783,7 +1149,17 @@ class eurotherm2408(object):
 
     @temperatureSensor.setter
     def temperatureSensor(self, value):
+        """
+        Set the type of temperature sensor on the device.
 
+        Args:
+            value (str): The type of temperature sensor to set.
+
+        Notes:
+            This setter changes the temperature sensor type on the device by setting the `Input_type` parameter.
+            It also enters configuration mode (`Instrument_Mode = 2`), applies the setting, exits configuration mode
+            (`Instrument_Mode = 0`), waits for 5 seconds, and then reconnects to the device.
+        """
         if(value != self.temperatureSensor):
             self.Instrument_Mode = 2
 
@@ -820,6 +1196,12 @@ class eurotherm2408(object):
 
     @property
     def rampUnit(self):
+        """
+        Get the unit of measurement for the ramp rate.
+
+        Returns:
+            str: The unit of measurement for the ramp rate, such as "Seconds", "Minutes", or "Hours".
+        """
         units = self.Setpoint_rate_limit_units
         if units == 0 : return "Seconds"
         if units == 1 : return "Minutes"
@@ -828,7 +1210,17 @@ class eurotherm2408(object):
 
     @rampUnit.setter
     def rampUnit(self, value):
+        """
+        Set the unit of measurement for the ramp rate.
 
+        Args:
+            value (str): The unit of measurement to set.
+
+        Notes:
+            This setter changes the unit of measurement for the ramp rate on the device by setting the `Setpoint_rate_limit_units` parameter.
+            It also enters configuration mode (`Instrument_Mode = 2`), applies the setting, exits configuration mode
+            (`Instrument_Mode = 0`), waits for 5 seconds, and then reconnects to the device.
+        """
         if value == "Seconds": value = 0
         if value == "Minutes": value = 1
         if value == "Hours": value = 2
@@ -846,6 +1238,12 @@ class eurotherm2408(object):
 
     @property
     def timeUnits(self):
+        """
+        Get the unit of measurement for the integral and derivative time.
+
+        Returns:
+            str: The unit of measurement for the integral and derivative time, such as "Seconds", "Minutes", or "Hours".
+        """
         units = self.Integral_and_Derivative_time_units
         if units == 0 : return "Seconds"
         if units == 1 : return "Minutes"
@@ -855,7 +1253,17 @@ class eurotherm2408(object):
 
     @timeUnits.setter
     def timeUnits(self, value):
+        """
+        Set the unit of measurement for the integral and derivative time.
 
+        Args:
+            value (str): The unit of measurement to set.
+
+        Notes:
+            This setter changes the unit of measurement for the integral and derivative time on the device by setting the `Integral_and_Derivative_time_units` parameter.
+            It also enters configuration mode (`Instrument_Mode = 2`), applies the setting, exits configuration mode
+            (`Instrument_Mode = 0`), waits for 5 seconds, and then reconnects to the device.
+        """
         if value == "Seconds": value = 0
         if value == "Minutes": value = 1
         if value == "Hours": value = 2
@@ -873,10 +1281,27 @@ class eurotherm2408(object):
 
     @property
     def tensionRange(self):
+        """
+        Get the range of electrical output tension.
+
+        Returns:
+            tuple: A tuple containing the minimum and maximum electrical output tensions.
+        """
         return (self._1A_Minimum_electrical_output, self._1A_Maximum_electrical_output)
 
     @tensionRange.setter
     def tensionRange(self, values):
+        """
+        Set the range of electrical output tension.
+
+        Args:
+            values (tuple): A tuple containing the minimum and maximum electrical output tensions to set.
+
+        Notes:
+            This setter changes the range of electrical output tension on the device by setting the `_1A_Minimum_electrical_output` and `_1A_Maximum_electrical_output` parameters.
+            It also enters configuration mode (`Instrument_Mode = 2`), applies the settings, exits configuration mode
+            (`Instrument_Mode = 0`), waits for 5 seconds, and then reconnects to the device.
+        """
         print("Previous: "+str((self._1A_Minimum_electrical_output, self._1A_Maximum_electrical_output)))
         self.Instrument_Mode = 2
         self._1A_Minimum_electrical_output=values[0]
@@ -889,10 +1314,22 @@ class eurotherm2408(object):
 
     @property
     def decimalsDisp(self):
+        """
+        Get the number of decimal places in displayed values.
+
+        Returns:
+            int: The number of decimal places in displayed values.
+        """
         return self.Decimal_places_in_displayed_value
 
     @decimalsDisp.setter
     def decimalsDisp(self,value):
+            """
+            Get the number of decimal places in displayed values.
+
+            Returns:
+                int: The number of decimal places in displayed values.
+            """    
             self.Instrument_Mode = 2
             self.Decimal_places_in_displayed_value=value
             self.Instrument_Mode = 0
