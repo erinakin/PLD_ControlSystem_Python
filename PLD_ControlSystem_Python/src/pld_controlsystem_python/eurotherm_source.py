@@ -17,7 +17,7 @@ import math
 
 
 class eurotherm2408(object):
-    def __init__(self, serialPort, slaveAddress=1, baudrate=19200 ):
+    def __init__(self, serialPort, slaveAddress=1, baudrate=9600 ):
 
         # Keep this first in the class
         # 
@@ -423,7 +423,7 @@ class eurotherm2408(object):
 
 
 
-        self.debugPrint = False
+        self.debugPrint = True
 
         self.serialPort=serialPort
         self.slaveAddress = slaveAddress
