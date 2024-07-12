@@ -59,7 +59,7 @@ class eurotherm2408(object):
             proper operation and communication.
     """
 
-    def __init__(self, serialPort, slaveAddress=1, baudrate=9600 ):
+    def __init__(self, serialPort='COM1', slaveAddress=1, baudrate=9600 ):
         """
         Initializes the Eurotherm 2408 temperature controller.
 
