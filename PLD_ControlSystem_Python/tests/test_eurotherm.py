@@ -10,12 +10,12 @@ from pld_controlsystem_python.eurotherm_source import eurotherm2408  # adjust th
 
 class TestEurotherm2408(unittest.TestCase):
 
-    @patch('pld_controlsystem_python.eurotherm_source.serial.Serial')  # Mocking the serial.Serial class in the module
-    def setUp(self, mock_serial):
+    @patch('pld_controlsystem_python.eurotherm_source.minimalmodbus.Instrument')  # Mocking the Instrument class in minimalmodbus
+    def setUp(self, mock_instrument):
         """
-        Set up the eurotherm2408 instance and mock the serial connection.
+        Set up the eurotherm2408 instance and mock the minimalmodbus instrument connection.
         """
-        self.mock_serial_instance = mock_serial.return_value  # This is the mock instance of serial.Serial
+        self.mock_instrument_instance = mock_instrument.return_value  # This is the mock instance of minimalmodbus.Instrument
         self.tempctrl = eurotherm2408()
         self.tempctrl.instrument = MagicMock()
         self.tempctrl._registers = {
@@ -157,7 +157,6 @@ class TestEurotherm2408(unittest.TestCase):
         self.tempctrl._readRegister = MagicMock(return_value=123)
         expected = {key: 123 for key in self.tempctrl._registers.keys()}
         self.assertEqual(self.tempctrl.dumpAll(), expected)
-
 
 if __name__ == '__main__':
     unittest.main()
