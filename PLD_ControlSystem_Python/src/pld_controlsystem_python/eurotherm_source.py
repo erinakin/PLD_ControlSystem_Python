@@ -30,8 +30,8 @@ class eurotherm2408(object):
             - _writeFloat(register, value): Writes a floating-point value to a register.
             - _getattr__(name): Retrieves an attribute value.
             - _setattr__(name, value): Sets an attribute value.
-            - dumpAll(): Dumps all register values into a dictionary.
             - temperature: Property to retrieve the current temperature.
+            - dumpAll(): Dumps all register values into a dictionary.
             - remoteSetpoint: Property to retrieve the remote setpoint status.
             - setpoint: Property to retrieve and set the target setpoint.
             - P, I, D: Properties to retrieve and set PID controller parameters.
@@ -1143,6 +1143,70 @@ class eurotherm2408(object):
         if type == 16: return "Custom mV "
         if type == 17: return "Custom V"
         if type == 18: return "Custom mA"
+
+#5 SETPOINT PROGRAMMER MODE PARAMETERS
+#Permanenet changes to the stored program values can only be made when the Program is in reset state.
+
+
+    @property
+    def activeProgramNumber(self):
+        """
+        Get the active program number.
+
+        Returns:
+            int: The active program number.
+        """
+        return self.Current_program_running__active_prog_no
+
+# Need to confirm the number of programs the controller can store.
+    @activeProgramNumber.setter
+    def activeProgramNumber(self, value):
+        """
+        Set the active program number.
+
+        Args:
+            value (int): The value to set as the active program number.
+        """
+        self.Current_program_running__active_prog_no = value
+
+    @property
+    def programmerState(self):
+        """
+        Get the state of the programmer.
+
+        Returns:
+            str: The state of the programmer, such as "Reset", "Run", "Hold", "Haldback", or "Complete".
+            
+            "Reset": The programmer is inactive, and the controller behaves as standard controller.
+            "Run": The programmer varies the setpoint according to active program.
+            "Hold": Freezes the program to make temporary changes to the parameters.
+            "Holdback": Indicates that the measured value is lagging behind setpoint more than preset amount. 
+                        The program is in Hold state waiting for process to catchup
+            "Complete": The Program is complete.
+        """
+        state = self.Programmer_state_read
+        if state == 1 : return "Reset"
+        if state == 2 : return "Run"
+        if state == 4 : return "Hold"
+        if state == 8 : return "Holdback"
+        if state == 16 : return "Complete"
+
+    @programmerState.setter
+    def programmerState(self, state):
+        """
+        Set the state of the programmer.
+
+        Args:
+            state (str): The state to set for the programmer.
+        """
+
+        if state == "Reset": self.Programmer_state = 1
+        if state == "Run": self.Programmer_state = 2
+        if state == "Hold": self.Programmer_state = 4
+        if state == "Holdback": self.Programmer_state = 8
+        if state == "Complete": self.Programmer_state = 16
+
+    
 
 #5.7 CONFIGURATION MODE PARAMETERS
 #To write parameters in this group, it is first necessary to set the instrument mode parameter (Bisynch ‘IM’,

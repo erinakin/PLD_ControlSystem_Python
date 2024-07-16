@@ -14,9 +14,15 @@ class  TargetControls:
         :param port: The COM port to use for the serial connection.
         :param baudrate: The baud rate for the serial communication.
         :param timeout: The timeout for the serial communication.
+        Variables:
+        current_target: The current target position.
+        current_raster_speed: The current raster speed.
+        rotation_speed: The current rotation speed.
         """
         self.ser = serial.Serial(port, baudrate, timeout=timeout)
         self.current_target = 0
+        self.current_raster_speed = 0
+        self.rotation_speed = 0
 
     def send_command(self, command):
         """
@@ -31,7 +37,7 @@ class  TargetControls:
 
     def rotate_to_angle(self, angle):
         """
-        Rotate to a specified angle.
+        Rotate target on carousel to a specified angle.
 
         :param angle: The angle to rotate to.
         """
@@ -64,16 +70,23 @@ class  TargetControls:
 
     def set_raster_speed(self,speed):
         """
-        Set the rotation speed.
+        Set the raster speed.
 
-        :param speed: The rotation speed in degrees per second.
+        :param speed: The raster speed in degrees per second.
         
         """
         # Convert possible float speed to nearest integer speed
-        speed_int = round(speed)
-        command = f"'{speed_int}\n"
+        rasterSpeed_int = round(speed)
+        command = f"'{rasterSpeed_int}\n"
         self.send_command(command)
+        self.current_raster_speed = rasterSpeed_int
 
+    def get_raster_speed(self):
+        """
+        Get the current raster speed.
+        """
+        return self.current_raster_speed
+        
     def start_raster(self, raster_angle):
         """
         Begin rastering. Enter raster angle(deg)
@@ -109,9 +122,16 @@ class  TargetControls:
         
         """
         # Convert possible float speed to nearest integer speed
-        speed_int = round(speed)
-        command = f'#{speed_int}\n'
+        rotationSpeed_int = round(speed)
+        command = f'#{rotationSpeed_int}\n'
         self.send_command(command)
+        self.rotation_speed = rotationSpeed_int
+
+    def get_rotation_speed(self):
+        """
+        Get the current rotation speed.
+        """
+        return self.rotation_speed
 
     def move_to_target(self, target):
         """
