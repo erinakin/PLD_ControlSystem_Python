@@ -1158,7 +1158,7 @@ class eurotherm2408(object):
         """
         return self.Current_program_running__active_prog_no
 
-# Need to confirm the number of programs the controller can store.
+# Need to confirm the number of programs the controller can  STORE
     @activeProgramNumber.setter
     def activeProgramNumber(self, value):
         """

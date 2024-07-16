@@ -16,6 +16,7 @@ class AttenuatorControls:
         :param timeout: The timeout for the serial communication.
         """
         self.ser = serial.Serial(port, baudrate, timeout=timeout)
+        self.rotationSpeed = 0
 
     def send_command(self, command):
         """
@@ -71,9 +72,16 @@ class AttenuatorControls:
         Min speed = 1 deg/second
         """
         # Convert possible float speed to nearest integer speed
-        speed_int = round(speed)
-        command = f'#{speed_int}\n'
+        rotationSpeed_int = round(speed)
+        command = f'#{rotationSpeed_int}\n'
         self.send_command(command)
+        self.rotationSpeed = rotationSpeed_int
+
+    def get_rotation_speed(self):
+        """
+        Get the rotation speed.
+        """
+        return self.rotationSpeed  
 
     def close(self):
         """
