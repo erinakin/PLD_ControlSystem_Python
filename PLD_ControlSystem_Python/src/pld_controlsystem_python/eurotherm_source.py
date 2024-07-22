@@ -1162,7 +1162,8 @@ class eurotherm2408(object):
     @activeProgramNumber.setter
     def activeProgramNumber(self, value):
         """
-        Set the active program number.
+        Set the active program number. 
+        Note: Only applicable if controller can store multiple programs. Doesn't exist otherwise.
 
         Args:
             value (int): The value to set as the active program number.
@@ -1205,6 +1206,18 @@ class eurotherm2408(object):
         if state == "Hold": self.Programmer_state = 4
         if state == "Holdback": self.Programmer_state = 8
         if state == "Complete": self.Programmer_state = 16
+
+    @property
+    def checkMaxSegmentNo(self):
+        """
+        Get the maximum number of segments in the active program.
+        NOTE: Read only
+        Returns:
+            int: The maximum number of segments in the active program.
+            At least 8 can be up to 16 
+        """
+        return self.Maximum_Number_Of_Segments
+    
 
     
 
