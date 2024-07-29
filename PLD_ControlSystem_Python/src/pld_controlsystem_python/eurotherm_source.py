@@ -109,7 +109,7 @@ class eurotherm2408(object):
             "Dwell_Segment":62,
             "Goto":517,
             "Programmer_State_Write":57,
-            "Programmer_state_Read":23,
+            "Programmer_State_Read":23,
             "Gain_scheduler_setpoint":153,
             "Current_PID_set":72,
             "Proportional_band_PID1":6,
@@ -1076,20 +1076,20 @@ class eurotherm2408(object):
         self.manual = not value
 
     @property
-    def rampRate(self):
+    def rampRateLimit(self):
         """
-        Get the ramp rate (setpoint rate limit).
+        Get the ramp rate Limit(setpoint rate limit).
 
         Returns:
-            float: The current ramp rate (setpoint rate limit).
+            float: The current ramp rate Limit(setpoint rate limit).
         """
         #return self.Ramp_rate
         return self.Setpoint_rate_limit
 
-    @rampRate.setter
-    def rampRate(self, value):
+    @rampRateLimit.setter
+    def rampRateLimit(self, value):
         """
-        Set the ramp rate (setpoint rate limit).
+        Set the ramp rate Limit(setpoint rate limit).
 
         Args:
             value (float): The value to set as the ramp rate (setpoint rate limit).
@@ -1097,8 +1097,27 @@ class eurotherm2408(object):
         if self.Ramp_Rate_Disable == 1: print("Warning, ramp rate is disabled. myEuro.Ramp_Rate_Disable = 0 to reactivate.")
         #if self.Setpoint_rate_limit < value : print("Warning, Setpoint_rate_limit is lower than desired ramp rate.")
         self.Setpoint_rate_limit = value
-        self.Ramp_rate = value   # do not do anything
+        
 
+    @property
+    def rampRate(self):
+        """
+        Get the ramp rate.
+
+        Returns:
+            float: The current ramp rate.
+        """
+        return self.Ramp_rate
+
+    @rampRate.setter
+    def rampRate(self, value):
+        """
+        Set the ramp rate.
+
+        Args:
+            value (float): The value to set as the ramp rate.
+        """
+        self.Ramp_rate = value
 
     @property
     def resolution(self):
@@ -1174,10 +1193,9 @@ class eurotherm2408(object):
     def programmerState(self):
         """
         Get the state of the programmer.
-
-        Returns:
-            str: The state of the programmer, such as "Reset", "Run", "Hold", "Haldback", or "Complete".
-            
+         Returns:
+            str: The state of the programmer, such as "Reset", "Run", "Hold", "Holdback", or "Complete".
+           
             "Reset": The programmer is inactive, and the controller behaves as standard controller.
             "Run": The programmer varies the setpoint according to active program.
             "Hold": Freezes the program to make temporary changes to the parameters.
@@ -1185,13 +1203,16 @@ class eurotherm2408(object):
                         The program is in Hold state waiting for process to catchup
             "Complete": The Program is complete.
         """
-        state = self.Programmer_state_read
+    
+
+        state = self.Program_Status
         if state == 1 : return "Reset"
         if state == 2 : return "Run"
         if state == 4 : return "Hold"
         if state == 8 : return "Holdback"
-        if state == 16 : return "Complete"
+        if state == 16 : return self.Program_Status
 
+    "The state setter works but the program state read doesn't work. Need to check manual to see what MODBUS 23 does"
     @programmerState.setter
     def programmerState(self, state):
         """
@@ -1201,11 +1222,11 @@ class eurotherm2408(object):
             state (str): The state to set for the programmer.
         """
 
-        if state == "Reset": self.Programmer_state = 1
-        if state == "Run": self.Programmer_state = 2
-        if state == "Hold": self.Programmer_state = 4
-        if state == "Holdback": self.Programmer_state = 8
-        if state == "Complete": self.Programmer_state = 16
+        if state == "Reset": self.Programmer_State_Write = 1
+        if state == "Run": self.Programmer_State_Write = 2
+        if state == "Hold": self.Programmer_State_Write = 4
+        if state == "Holdback": self.Programmer_State_Write = 8
+        if state == "Complete": self.Programmer_State_Write = 16
 
     @property
     def checkMaxSegmentNo(self):
