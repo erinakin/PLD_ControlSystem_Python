@@ -9,7 +9,7 @@ class PressureControls:
     and select set points A and B. Each command sent to the pressure controller ends with a carriage return-line feed (CRLF).
     """
 
-    def __init__(self, port='COM11', baudrate=9600, timeout=1):
+    def __init__(self, port='COM1', baudrate=9600, timeout=1):
         """
         Initialize the serial connection to the pressure controller.
 
