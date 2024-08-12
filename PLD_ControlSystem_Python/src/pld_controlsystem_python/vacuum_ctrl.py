@@ -1,5 +1,5 @@
 import serial
-from pld_controlsystem_python.pfeiffer_vacuum_protocol import PfeifferVacuumProtocol as pvp
+from pfeiffer_vacuum_protocol import PfeifferVacuumProtocol as pvp
 
 class VacuumControls:
     def __init__(self, port='COM6', baudrate=9600, address=1):

@@ -2,4 +2,18 @@
 # To build the module reference correctly, make sure every external package
 # under `install_requires` in `setup.cfg` is also listed here!
 sphinx>=3.2.1
+pysftp>=0.2.9
+pyserial>=3.5
+numpy>=1.20.1
+minimalmodbus>=1.0.1
+asyncio>=3.4.3
+notebook>=6.5.0
+panel 
+watchfiles
+jupyter_bokeh
+pandas
+pygments
+hvplot
+# ftplib
+# logging
 # sphinx_rtd_theme

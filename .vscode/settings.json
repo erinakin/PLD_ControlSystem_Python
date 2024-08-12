@@ -1,5 +1,6 @@
 {
     "python.analysis.extraPaths": [
-        "./PLD_ControlSystem_Python/src"
+        "./PLD_ControlSystem_Python/src",
+        "./PLD_ControlSystem_Python/src/pld_controlsystem_python"
     ]
 }
