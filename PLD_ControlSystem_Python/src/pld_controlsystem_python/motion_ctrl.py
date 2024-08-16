@@ -57,7 +57,7 @@ class MotionController(NewportXPS):
         Args:
             stage (str): The name of the stage.
             position (float): The target position.
-            relative (bool): Whether the move is relative or absolute. Default is False.
+            relative (bool): Whether the move is relative or absolute. Default is False(Absolute).
         """
         # To extract the name of the stages (sname)
         # sname in self.stages.items()
