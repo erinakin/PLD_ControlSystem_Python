@@ -8,8 +8,8 @@ controller = None
 initialize_button = pn.widgets.Button(name='Initialize & Home', button_type='primary')
 stop_button = pn.widgets.Button(name='Stop Controller', button_type='danger')
 stage_selector = pn.widgets.Select(name='Stage', options=[])
-position_slider = pn.widgets.FloatSlider(name='Position', start=0, end=100, step=0.1)
-velocity_slider = pn.widgets.FloatSlider(name='Velocity', start=0, end=1000, step=1)
+position_input = pn.widgets.FloatInput(name='Position', value=0.0, step=0.1, start=0.0, end=100.0)
+velocity_input = pn.widgets.FloatInput(name='Velocity', value=0.0, step=1.0, start=0.0, end=1000.0)
 status_display = pn.widgets.StaticText(name='Status', value='')
 error_display = pn.pane.Markdown('')
 
@@ -75,7 +75,7 @@ def set_position(event):
     global controller
     try:
         if controller is not None:
-            position = position_slider.value
+            position = position_input.value
             stage = stage_selector.value
             controller.set_position(stage, position)
             status_display.value = f"Position of {stage} set to {position}"
@@ -88,7 +88,7 @@ def set_velocity(event):
     global controller
     try:
         if controller is not None:
-            velocity = velocity_slider.value
+            velocity = velocity_input.value
             stage = stage_selector.value
             controller.set_velocity(stage, velocity)
             status_display.value = f"Velocity of {stage} set to {velocity}"
@@ -101,13 +101,13 @@ def set_velocity(event):
 # Link buttons to callback functions
 initialize_button.on_click(initialize_and_home)
 stop_button.on_click(stop_controller)
-position_slider.param.watch(set_position, 'value')
-velocity_slider.param.watch(set_velocity, 'value')
+position_input.param.watch(set_position, 'value')
+velocity_input.param.watch(set_velocity, 'value')
 
 # Arrange components in a layout
-layout = pn.Column(
+layout = pn.Column(pn.pane.Markdown("### Stage Motion Control System"),
     pn.Row(initialize_button, stop_button),
-    pn.Row(stage_selector, position_slider, velocity_slider),
+    pn.Row(stage_selector, position_input, velocity_input),
     status_display,
     error_display
 )
