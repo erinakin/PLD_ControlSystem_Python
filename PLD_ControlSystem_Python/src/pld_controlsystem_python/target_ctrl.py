@@ -3,11 +3,11 @@ import time
 
 class  TargetControls:
     """
-    A class to with functions to control multi-target carousel controller for Neccera PLD System
-    A pythonized version of preexisting Labview Multi-Target-Carousel-Controler VI code.
+    A class to with functions to control multi-target carousel controller for Neoccera PLD System
+    A pythonized version of preexisting Labview Multi-Target-Carousel-Controller VI code.
     """
 
-    def __init__(self, port='COM7', baudrate=9600, timeout=1):
+    def __init__(self, port=None, baudrate=9600, timeout=1):
         """
         Initialize the serial connection to the multi-target carousel controller.
 
@@ -20,6 +20,7 @@ class  TargetControls:
         rotation_speed: The current rotation speed.
         """
         self.ser = serial.Serial(port, baudrate, timeout=timeout)
+        self.port = port
         self.current_target = 0
         self.current_raster_speed = 0
         self.rotation_speed = 0
@@ -165,7 +166,9 @@ class  TargetControls:
         """
         Close the serial connection.
         """
-        self.ser.close()
+        if self.ser is not None:
+            self.ser.close()
+            print(f"Serial connection on {self.port} closed.")
 
 def main():
     # Create an instance of the AttenuatorControls class

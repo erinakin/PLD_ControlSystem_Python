@@ -4,14 +4,22 @@ from motion_ctrl import MotionController, XPSException
 # Initialize an empty motion controller variable
 controller = None
 
-# Define GUI components
+# Initialize Panel
+pn.extension()
+
+# UI components
 initialize_button = pn.widgets.Button(name='Initialize & Home', button_type='primary')
 stop_button = pn.widgets.Button(name='Stop Controller', button_type='danger')
 stage_selector = pn.widgets.Select(name='Stage', options=[])
-position_input = pn.widgets.FloatInput(name='Position', value=0.0, step=0.1, start=0.0, end=100.0)
-velocity_input = pn.widgets.FloatInput(name='Velocity', value=0.0, step=1.0, start=0.0, end=1000.0)
+position_input = pn.widgets.FloatInput(name='Position', value=0.0, step=0.1, start=-50.0, end=50.0)
+set_position_button = pn.widgets.Button(name='Set Position', button_type='primary')
+velocity_input = pn.widgets.FloatInput(name='Velocity', value=500.0, step=1.0, start=0.0, end=500.0)
+set_velocity_button = pn.widgets.Button(name='Set Velocity', button_type='primary')
+
+# Status Indicators
 status_display = pn.widgets.StaticText(name='Status', value='')
 error_display = pn.pane.Markdown('')
+action_message = pn.pane.Markdown("<div id='message-box' style='border: 1px solid black; padding: 10px; border-radius: 5px;'> </div>", width=400)
 
 # Function to extract stage names from the status message
 def extract_stage_names(status_message):
@@ -25,6 +33,7 @@ def extract_stage_names(status_message):
     list: The list of stage names.
     """
     stages = []
+
     # Find the part of the message with the stages
     if "Stages:" in status_message and "Hardware Status:" in status_message:
         stages_part = status_message.split("Stages:")[1].split("Hardware Status:")[0].strip()
@@ -35,7 +44,12 @@ def extract_stage_names(status_message):
                 stages.append(stage_name)
     return stages
 
-# Define callback functions
+# Define actions
+def update_action_message(text):
+    action_message.object = f"""
+    <div id='message-box' style='border: 1px solid black; padding: 20px; border-radius: 5px;'>{text}</div>
+    """
+
 def initialize_and_home(event):
     
     global controller
@@ -71,27 +85,27 @@ def stop_controller(event):
     except XPSException as e:
         error_display.object = f"<div style='color:red'><strong>Error:</strong> {str(e)}</div>"
 
-def set_position(event):
+def set_position_click(event):
     global controller
     try:
         if controller is not None:
             position = position_input.value
             stage = stage_selector.value
             controller.set_position(stage, position)
-            status_display.value = f"Position of {stage} set to {position}"
+            update_action_message(f"Position of {stage} set to {position}")
             error_display.object = ''
         else:
             error_display.object = "<div style='color:red'><strong>Error:</strong> Motion controller not initialized.</div>"
     except XPSException as e:
         error_display.object = f"<div style='color:red'><strong>Error:</strong> {str(e)}</div>"
-def set_velocity(event):
+def set_velocity_click(event):
     global controller
     try:
         if controller is not None:
             velocity = velocity_input.value
             stage = stage_selector.value
             controller.set_velocity(stage, velocity)
-            status_display.value = f"Velocity of {stage} set to {velocity}"
+            update_action_message(f"Velocity of {stage} set to {velocity}")
             error_display.object = ''
         else:
             error_display.object = "<div style='color:red'><strong>Error:</strong> Motion controller not initialized.</div>"
@@ -101,14 +115,17 @@ def set_velocity(event):
 # Link buttons to callback functions
 initialize_button.on_click(initialize_and_home)
 stop_button.on_click(stop_controller)
-position_input.param.watch(set_position, 'value')
-velocity_input.param.watch(set_velocity, 'value')
+set_position_button.on_click(set_position_click)
+set_velocity_button.on_click(set_velocity_click)
 
 # Arrange components in a layout
 layout = pn.Column(pn.pane.Markdown("### Stage Motion Control System"),
     pn.Row(initialize_button, stop_button),
-    pn.Row(stage_selector, position_input, velocity_input),
+    pn.Row(stage_selector),
+    pn.Row(position_input, set_position_button),
+    pn.Row(velocity_input, set_velocity_button),
     status_display,
+    action_message,
     error_display
 )
 

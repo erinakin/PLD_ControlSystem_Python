@@ -71,7 +71,7 @@ class MotionController(NewportXPS):
 
         Args:
             stage (str): The name of the stage.
-            velocity (float): The target velocity.
+            velocity (float): The target velocity. Default = 500 units/sec
            
         """
         self.set_velocity_parameters(stage=stage, velo=velocity)

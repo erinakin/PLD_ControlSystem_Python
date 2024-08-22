@@ -2,7 +2,7 @@ import serial
 from pfeiffer_vacuum_protocol import PfeifferVacuumProtocol as pvp
 
 class VacuumControls:
-    def __init__(self, port='COM6', baudrate=9600, address=1):
+    def __init__(self, port=None, baudrate=9600, address=1):
         """
         Initializes the VacuumControls class with the specified serial port and baudrate.
 
@@ -13,6 +13,10 @@ class VacuumControls:
         """
         self.ser = serial.Serial(port, baudrate, timeout=1)
         self.address = address
+        self.port = port
+        self.pressure_hpa = None
+        self.pressure_torr = None
+        self.current_setpoint = None
     
     def read_pressure(self):
         """
@@ -23,9 +27,9 @@ class VacuumControls:
                Returns (None, None) if no response is received.
         """
         try:
-            pressure_hpa = pvp.read_pressure(self.ser, self.address)
-            pressure_torr = pressure_hpa / 1.33322  # Convert hPa to Torr
-            return print(pressure_hpa, 'hPa', pressure_torr, 'Torr') # Return the pressure in hPa and Torr
+            self.pressure_hpa = pvp.read_pressure(self.ser, self.address)
+            self.pressure_torr = self.pressure_hpa / 1.33322  # Convert hPa to Torr
+            return print(self.pressure_hpa, 'hPa', self.pressure_torr, 'Torr') # Return the pressure in hPa and Torr
         except ValueError:
             return None, None
 
@@ -61,14 +65,18 @@ class VacuumControls:
         """
         if option == '0':
             val = 000
+            self.current_setpoint = "Low Pressure"
+            
         elif option == '1':
             val = 1
+            self.current_setpoint = "Atmospheric Pressure"
+            
         else:
             raise ValueError("Invalid option. Use '0' or '1'.")
         
         try:
             pvp.write_pressure_setpoint(self.ser, self.address, val)
-            return "Pressure setpoint updated successfully."
+            return "Pressure setpoint updated successfully.", self.current_setpoint
         except ValueError as e:
             return str(e)
     
@@ -105,6 +113,8 @@ class VacuumControls:
         """
         Closes the serial connection.
         """
-        self.ser.close()
+        if self.ser is not None:
+            self.ser.close()
+            print(f"Serial connection on {self.port} closed.")
 
 
