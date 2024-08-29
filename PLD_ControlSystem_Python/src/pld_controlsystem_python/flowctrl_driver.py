@@ -300,6 +300,7 @@ class FlowController(FlowMeter):
     that the "Input" option is set to "Serial".
     """
 
+    #
     registers: ClassVar[dict] = {'mass flow': 0b00100101, 'vol flow': 0b00100100,
                                  'abs pressure': 0b00100010, 'gauge pressure': 0b00100110,
                                  'diff pressure': 0b00100111}
@@ -531,6 +532,8 @@ class FlowController(FlowMeter):
 
         Args:
             point: Either "flow" or "pressure".
+            NOTE: "flow" includes: 'mass flow', 'vol flow'
+                  "pressure" includes: 'abs pressure', 'gauge pressure', 'diff pressure'.
         """
         if point not in self.registers:
             raise ValueError("Control point must be 'flow' or 'pressure'.")
