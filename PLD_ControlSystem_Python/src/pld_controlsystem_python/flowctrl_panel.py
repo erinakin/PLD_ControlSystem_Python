@@ -37,6 +37,16 @@ async def update_display(controller, displays):
         for display in displays.values():
             display.value = f"Error: {str(e)}"
 
+# Function to update display with streamed data
+async def update_display_from_stream(controller, displays):
+    async for data in controller.get_stream():
+        displays['pressure'].value = f"Pressure: {data['pressure']} psia"
+        displays['temperature'].value = f"Temperature: {data['temperature']} °C"
+        displays['volumetric_flow'].value = f"Volumetric Flow: {data['volumetric_flow']} units"
+        displays['mass_flow'].value = f"Mass Flow: {data['mass_flow']} units"
+        displays['setpoint'].value = f"Setpoint: {data['setpoint']} units"
+        displays['gas'].value = f"Gas: {data['gas']}"
+
 # Function to change the setpoint
 async def set_setpoint(controller, setpoint_input, setpoint_display):
     if controller and controller.control_point in ('mass flow', 'vol flow'):
@@ -58,11 +68,44 @@ async def set_control_point(controller, control_point_selector, control_point_di
         await controller._set_control_point(control_point_selector.value)
         control_point_display.value = f" Current Control Point: {await controller._get_control_point()}"
 
+# Function to toggle streaming mode
+async def toggle_streaming(controller, streaming_button, status_text, displays):  
+    global streaming_task
+    if controller.streaming:
+        # Stop the streaming
+        streaming_button.name = "Start Stream"
+        streaming_button.button_type = "primary"
+        status_text.object = "<span style='color:red'>Streaming mode is OFF</span>"
+        await controller.stop_stream()
+        if streaming_task:
+            streaming_task.cancel()
+    else:
+        # Start the streaming
+        streaming_button.name = "Stop Stream"
+        streaming_button.button_type = "danger"
+        status_text.object = "<span style='color:green'>Streaming mode is ON</span>"
+
+        # Start a new task to handle the streaming data
+        async def stream_data():
+            async for data in controller.get_stream():
+                displays['pressure'].value = f"Pressure: {data['pressure']} psia"
+                displays['temperature'].value = f"Temperature: {data['temperature']} °C"
+                displays['volumetric_flow'].value = f"Volumetric Flow: {data['volumetric_flow']} units"
+                displays['mass_flow'].value = f"Mass Flow: {data['mass_flow']} units"
+                displays['setpoint'].value = f"Setpoint: {data['setpoint']} units"
+                displays['gas'].value = f"Gas: {data['gas']}"
+
+        streaming_task = asyncio.create_task(stream_data())
+
 # Function to create a panel layout for a single flow controller
 def create_flow_controller_tab(com_port, unit):
     # Widgets specific to each tab
     status = pn.widgets.StaticText(value="Disconnected")
     name_display = pn.widgets.StaticText(value="Name: N/A")
+
+    # Streaming Mode
+    streaming_button = pn.widgets.Button(name="Start Stream", button_type="primary")
+    status_text = pn.pane.Markdown("<span style='color:red'>Streaming mode is OFF</span>")
 
     # Measurement displays
     displays = {
@@ -107,6 +150,8 @@ def create_flow_controller_tab(com_port, unit):
         else:
             status.value = "Controller not initialized"
 
+    
+    
     # Callback to set the control point
     async def confirm_control_point(event):
         nonlocal controller
@@ -124,6 +169,10 @@ def create_flow_controller_tab(com_port, unit):
     stop_button = pn.widgets.Button(name="Stop", button_type="danger")
     stop_button.on_click(stop_device)
 
+    # Callback to toggle streaming mode
+    streaming_button.on_click(lambda event: asyncio.create_task(toggle_streaming(controller, streaming_button, status_text, displays)))
+
+    # Callback to set the control point
     control_point_button = pn.widgets.Button(name="Set Control Point Type", button_type="primary")
     control_point_button.on_click(confirm_control_point)
 
@@ -146,7 +195,7 @@ def create_flow_controller_tab(com_port, unit):
         setpoint_button,
         setpoint_display)
         ),
-
+        pn.Row(streaming_button, status_text),
         displays['pressure'],
         displays['temperature'],
         displays['volumetric_flow'],

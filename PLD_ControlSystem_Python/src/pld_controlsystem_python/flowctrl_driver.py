@@ -47,6 +47,7 @@ class FlowMeter:
                      'setpoint', 'gas']
         self.open = True
         self.firmware: str | None = None
+        self.streaming = False
 
     async def __aenter__(self, *args: Any) -> FlowMeter:
         """Provide async enter to context manager."""
@@ -146,6 +147,60 @@ class FlowMeter:
             self.keys.insert(1, 'setpoint')
         return {k: (float(v) if _is_float(v) else v)
                 for k, v in zip(self.keys, values)}
+
+    async def get_stream(self):
+        """Put the mass flow controller into streaming mode and process data."""
+        command = f'{self.unit}@=@'
+        await self._write_and_read(command)  # Put the controller into streaming mode
+        self.streaming = True
+
+        while self.streaming:
+            line = await self._write_and_read('')  # Read the line of data
+            if not line:
+                raise OSError("Could not read values")
+
+            spl = line.split()
+            unit, values = spl[0], spl[1:] 
+
+            # Over range errors for mass, volume, pressure, and temperature
+            while values[-1].upper() in ['MOV', 'VOV', 'POV', 'TOV']:
+                del values[-1]
+            if unit != self.unit:
+                raise ValueError("Flow controller unit ID mismatch.")
+            if values[-1].upper() == 'LCK':
+                self.button_lock = True
+                del values[-1]
+            else:
+                self.button_lock = False
+            if len(values) == 5 and len(self.keys) == 6:
+                del self.keys[-2]
+            elif len(values) == 7 and len(self.keys) == 6:
+                self.keys.insert(5, 'total flow')
+            elif len(values) == 2 and len(self.keys) == 6:
+                self.keys.insert(1, 'setpoint')
+
+            # Update the controller's state with the new data
+            self.state = {k: (float(v) if self._is_float(v) else v) for k, v in zip(self.keys, values)}
+            self.state['control_point'] = self.control_point
+
+            yield self.state  # Yield the state for UI updates or further processing
+
+            await asyncio.sleep(0.05)  # Wait for the next data line (50ms interval)
+
+    async def stop_stream(self):
+        """Stop the streaming mode."""
+        command = f'@@={self.unit}'
+        await self._write_and_read(command)  
+        self.streaming = False
+        
+
+    @staticmethod
+    def _is_float(value):
+        try:
+            float(value)
+            return True
+        except ValueError:
+            return False    
 
     async def set_gas(self, gas: str | int) -> None:
         """Set the gas type.
@@ -354,6 +409,7 @@ class FlowController(FlowMeter):
             return None
         state['control_point'] = self.control_point
         return state
+    
 
     async def set_flow_rate(self, flowrate: float) -> None:
         """Set the target flow rate.
