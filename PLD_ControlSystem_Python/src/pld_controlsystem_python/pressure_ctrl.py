@@ -25,8 +25,8 @@ class PressureControls:
         self.ser.reset_input_buffer()
         self.ser.reset_output_buffer()
 
-        # 10ms Delay to allow the pressure controller to process the command
-        time.sleep(0.01)
+        # 1s Delay to allow the pressure controller to process the command
+        time.sleep(1)
 
     def send_request(self, request, response_prefix, wait_time=0.25):
         """
@@ -61,7 +61,7 @@ class PressureControls:
                 return "Wrong response"
         else:
             return "No response"
-
+    
     def send_command(self, command, delay=0.25):
         """
         Send a command to the device and read the response.
