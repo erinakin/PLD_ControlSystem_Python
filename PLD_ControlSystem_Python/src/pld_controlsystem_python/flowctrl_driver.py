@@ -154,41 +154,51 @@ class FlowMeter:
         await self._write_and_read(command)  # Put the controller into streaming mode
         self.streaming = True
 
-        while self.streaming:
-            line = await self._write_and_read('')  # Read the line of data
-            if not line:
-                raise OSError("Could not read values")
+        try:
+            while self.streaming:
+                line = await self._write_and_read('')  # Read the line of data
+                if not line:
+                    raise OSError("Could not read values")
 
-            spl = line.split()
-            unit, values = spl[0], spl[1:] 
+                spl = line.split()
+                unit, values = spl[0], spl[1:] 
 
-            # Over range errors for mass, volume, pressure, and temperature
-            while values[-1].upper() in ['MOV', 'VOV', 'POV', 'TOV']:
-                del values[-1]
-            if unit != self.unit:
-                raise ValueError("Flow controller unit ID mismatch.")
-            if values[-1].upper() == 'LCK':
-                self.button_lock = True
-                del values[-1]
-            else:
-                self.button_lock = False
-            if len(values) == 5 and len(self.keys) == 6:
-                del self.keys[-2]
-            elif len(values) == 7 and len(self.keys) == 6:
-                self.keys.insert(5, 'total flow')
-            elif len(values) == 2 and len(self.keys) == 6:
-                self.keys.insert(1, 'setpoint')
+                # Over range errors for mass, volume, pressure, and temperature
+                while values[-1].upper() in ['MOV', 'VOV', 'POV', 'TOV']:
+                    del values[-1]
+                if unit != self.unit:
+                    raise ValueError("Flow controller unit ID mismatch.")
+                if values[-1].upper() == 'LCK':
+                    self.button_lock = True
+                    del values[-1]
+                else:
+                    self.button_lock = False
+                if len(values) == 5 and len(self.keys) == 6:
+                    del self.keys[-2]
+                elif len(values) == 7 and len(self.keys) == 6:
+                    self.keys.insert(5, 'total flow')
+                elif len(values) == 2 and len(self.keys) == 6:
+                    self.keys.insert(1, 'setpoint')
 
-            # Update the controller's state with the new data
-            self.state = {k: (float(v) if self._is_float(v) else v) for k, v in zip(self.keys, values)}
-            self.state['control_point'] = self.control_point
+                # Update the controller's state with the new data
+                self.state = {k: (float(v) if self._is_float(v) else v) for k, v in zip(self.keys, values)}
+                self.state['control_point'] = self.control_point
 
-            yield self.state  # Yield the state for UI updates or further processing
+                yield self.state  # Yield the state for UI updates or further processing
 
-            await asyncio.sleep(0.05)  # Wait for the next data line (50ms interval)
+                await asyncio.sleep(0.05)  # Wait for the next data line (50ms interval)
+
+        except asyncio.CancelledError:
+            pass  # Handle the cancellation gracefully
+        finally:
+            self.unit = 'A'
+            command = f'@@={self.unit}'
+            await self._write_and_read(command)  # Put the controller into streaming mode
+            self.streaming = False  # Ensure streaming is turned off in case of any errors
 
     async def stop_stream(self):
         """Stop the streaming mode."""
+        self.unit = 'A'
         command = f'@@={self.unit}'
         await self._write_and_read(command)  
         self.streaming = False
@@ -410,6 +420,14 @@ class FlowController(FlowMeter):
         state['control_point'] = self.control_point
         return state
     
+    async def get_stream(self):
+        """Put the mass flow controller into streaming mode and process data."""
+
+        return super().get_stream()
+    
+    async def stop_stream(self):
+        """Stop the streaming mode."""
+        return super().stop_stream()
 
     async def set_flow_rate(self, flowrate: float) -> None:
         """Set the target flow rate.

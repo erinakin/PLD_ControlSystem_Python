@@ -6,15 +6,19 @@ from flowctrl_driver import FlowController
 # Initialize Panel 
 pn.extension()
 
+streaming_task = None  # Initialize the streaming task to None
+  
 # Function to get available COM ports
 def get_available_com_ports():
     return [port.device for port in list_ports.comports()]
 
 # Function to initialize a flow controller
 async def initialize_flow_controller(com_port, unit):
-    controller = FlowController(address=com_port, unit=unit)
+    controller = FlowController(address=com_port, unit='A')
     flow_controller_name = f"Alicat Flow Controller"
     await controller.get()  # Dummy call to initialize the controller
+    controller.streaming = False  # Explicitly initialize the streaming flag
+    
     return controller, flow_controller_name
 
 # Function to close a flow controller
@@ -39,13 +43,17 @@ async def update_display(controller, displays):
 
 # Function to update display with streamed data
 async def update_display_from_stream(controller, displays):
-    async for data in controller.get_stream():
-        displays['pressure'].value = f"Pressure: {data['pressure']} psia"
-        displays['temperature'].value = f"Temperature: {data['temperature']} °C"
-        displays['volumetric_flow'].value = f"Volumetric Flow: {data['volumetric_flow']} units"
-        displays['mass_flow'].value = f"Mass Flow: {data['mass_flow']} units"
-        displays['setpoint'].value = f"Setpoint: {data['setpoint']} units"
-        displays['gas'].value = f"Gas: {data['gas']}"
+    try:
+        async for data in controller.get_stream():
+            displays['pressure'].value = f"Pressure: {data['pressure']} psia"
+            displays['temperature'].value = f"Temperature: {data['temperature']} °C"
+            displays['volumetric_flow'].value = f"Volumetric Flow: {data['volumetric_flow']} units"
+            displays['mass_flow'].value = f"Mass Flow: {data['mass_flow']} units"
+            displays['setpoint'].value = f"Setpoint: {data['setpoint']} units"
+            displays['gas'].value = f"Gas: {data['gas']}"
+    except Exception as e:
+        for display in displays.values():
+            display.value = f"Error: {str(e)}"
 
 # Function to change the setpoint
 async def set_setpoint(controller, setpoint_input, setpoint_display):
@@ -79,6 +87,7 @@ async def toggle_streaming(controller, streaming_button, status_text, displays):
         await controller.stop_stream()
         if streaming_task:
             streaming_task.cancel()
+            streaming_task = None  # Clear the task after cancellation
     else:
         # Start the streaming
         streaming_button.name = "Stop Stream"
@@ -87,7 +96,8 @@ async def toggle_streaming(controller, streaming_button, status_text, displays):
 
         # Start a new task to handle the streaming data
         async def stream_data():
-            async for data in controller.get_stream():
+             stream = await controller.get_stream()  # Await the coroutine here
+             async for data in stream:
                 displays['pressure'].value = f"Pressure: {data['pressure']} psia"
                 displays['temperature'].value = f"Temperature: {data['temperature']} °C"
                 displays['volumetric_flow'].value = f"Volumetric Flow: {data['volumetric_flow']} units"
@@ -95,6 +105,7 @@ async def toggle_streaming(controller, streaming_button, status_text, displays):
                 displays['setpoint'].value = f"Setpoint: {data['setpoint']} units"
                 displays['gas'].value = f"Gas: {data['gas']}"
 
+        # Assign the task to the global variable
         streaming_task = asyncio.create_task(stream_data())
 
 # Function to create a panel layout for a single flow controller
@@ -130,10 +141,13 @@ def create_flow_controller_tab(com_port, unit):
     async def start_device(event):
         nonlocal controller
         status.value = "Connecting..."
-        controller, name = await initialize_flow_controller(com_port, unit)
-        status.value = "Connected"
-        name_display.value = f"Name: {name}"
-        await update_display(controller, displays)
+        try:
+            controller, name = await initialize_flow_controller(com_port, unit)
+            status.value = "Connected"
+            name_display.value = f"Name: {name}"
+            await update_display(controller, displays)
+        except Exception as e:
+            status.value = f"Connection failed: {str(e)}"
 
     # Callback to stop the device
     async def stop_device(event):
