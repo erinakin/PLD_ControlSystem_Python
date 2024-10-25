@@ -1,5 +1,6 @@
 import serial
 from pfeiffer_vacuum_protocol import PfeifferVacuumProtocol as pvp
+import time
 
 class VacuumControls:
     def __init__(self, port=None, baudrate=9600, address=1):
@@ -32,9 +33,7 @@ class VacuumControls:
             return print(self.pressure_hpa, 'hPa', self.pressure_torr, 'Torr') # Return the pressure in hPa and Torr
         except ValueError:
             return None, None
-
-
- 
+        
     def read_error(self):
         """
         Reads the actual error code from the device.

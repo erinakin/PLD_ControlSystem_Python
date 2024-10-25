@@ -21,6 +21,28 @@ stop_button = pn.widgets.Button(name='STOP', button_type='danger', width=100)
 
 pressure_display = pn.widgets.StaticText(name='Current Pressure', value="---")
 read_pressure_button = pn.widgets.Button(name='Read Pressure', button_type='primary')
+stop_reading_num_button = pn.widgets.Button(name='Stop Pressure', button_type='primary')
+
+def update_pressure():
+    num = VacuumControls.read_pressure()  #get pressure
+    pressure_display.value = str(num)  # Update the StaticText value with the new pressur
+
+callback = None
+
+def start_callback(event):
+    global callback
+    if callback is None:  # Start the callback only if it isn't already running
+        callback = pn.state.add_periodic_callback(update_pressure, period=1000)  # 1000 ms = 1 second
+
+def stop_callback(event):
+    global callback
+    if callback is not None:  # Stop the callback only if it is running
+        callback.stop()
+        callback = None  # Reset the callback variable
+
+read_pressure_button.on_click(start_callback)
+stop_reading_num_button.on_click(stop_callback)
+
 
 correction_factor_display = pn.widgets.StaticText(name='Current Correction Factor', value='---')
 setpoint_display = pn.widgets.StaticText(name='Current Setpoint', value='---')
@@ -99,7 +121,7 @@ def stop_connection(event):
 # Link buttons to callback functions
 start_button.on_click(start_connection)
 set_pressure_button.on_click(set_pressure)
-read_pressure_button.on_click(read_pressure)
+#read_pressure_button.on_click(read_pressure) commented out
 set_correction_factor_button.on_click(set_correction_factor)
 stop_button.on_click(stop_connection)
 
