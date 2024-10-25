@@ -140,7 +140,7 @@ class PressureControls:
         else:
             raise ValueError("Invalid response or no response from device")
 
-    def setpoint_request(self, setpoint, full_scale=None):
+    def setpoint_value_request(self, setpoint, full_scale=None):
 
         """
         Request the setpoint value from the pressure controller and convert it to the actual value based on F.S.
@@ -191,18 +191,31 @@ class PressureControls:
             return "Invalid response or no response"
         
 
-    def setpoint_controltype_request(self, setpoint):
+    def setpoint_controltype(self, action, setpoint, control_type=None):
         """
-        Request the control type for a specified setpoint from the pressure controller.
+        Check or set the control type for a specified setpoint on the pressure controller.
 
         Args:
+            action (str): 'check' to check the current control type, 'set' to change the control type.
             setpoint (str): The setpoint identifier ('analog', 'A', 'B', 'C', 'D', or 'E').
+            control_type (str, optional): The desired control type ('pressure' or 'position') (used only when action is 'set').
 
         Returns:
-            dict: A dictionary containing the setpoint and control type.
+            str: The current control type (if action is 'check').
+            str: Confirmation message after setting the control type (if action is 'set').
         """
-        # Mapping setpoint to corresponding request code (Rxx)
-        setpoint_map = {
+        # Command mapping for setting the control type (T1, T2, etc.)
+        set_command_map = {
+            'A': 'T1',
+            'B': 'T2',
+            'C': 'T3',
+            'D': 'T4',
+            'E': 'T5',
+            'analog': 'T6'
+        }
+
+        # Command mapping for checking the control type (Rxx)
+        check_command_map = {
             'analog': '25',
             'A': '26',
             'B': '27',
@@ -211,50 +224,59 @@ class PressureControls:
             'E': '30'
         }
 
-        if setpoint not in setpoint_map:
+        # Control type mapping (for setting)
+        control_type_map = {
+            'position': 0,
+            'pressure': 1
+        }
+
+        if setpoint not in set_command_map or setpoint not in check_command_map:
             raise ValueError("Invalid setpoint. Choose between 'analog', 'A', 'B', 'C', 'D', or 'E'.")
 
-        # Get the corresponding request code
-        request_code = setpoint_map[setpoint]
+        if action == 'check':
+            # Use the check_command_map for the check command
+            request_code = check_command_map[setpoint]
 
-        # Send the request to check the control type for the specified setpoint
-        response = self.send_request(f'R{request_code}', 'T')
+            # Send the request to check the control type for the specified setpoint
+            response = self.send_request(f'R{request_code}', 'T')
 
-        # Strip any CRLF characters
-        response = response.strip()
+            # Strip any CRLF characters
+            response = response.strip()
 
-        if response.startswith('T') and len(response) == 3:
-            # Extract the setpoint code (x) and control type value
-            setpoint_code = int(response[1])
-            control_type_value = int(response[2])
+            if response.startswith('T') and len(response) == 3:
+                # Extract the control type value
+                control_type_value = int(response[2])
 
-            # Map the setpoint code back to setpoint name
-            setpoint_name_map = {
-                0: 'Analog set point',
-                1: 'Set point A',
-                2: 'Set point B',
-                3: 'Set point C',
-                4: 'Set point D',
-                5: 'Set point E'
-            }
+                # Map the control type value for checking
+                control_type_map_rev = {
+                    0: 'position',
+                    1: 'pressure'
+                }
 
-            # Map the control type value
-            control_type_map = {
-                0: 'Position',
-                1: 'Pressure'
-            }
+                # Get the control type based on the value
+                control_type = control_type_map_rev.get(control_type_value, "Unknown control type")
 
-            # Get the setpoint name and control type
-            setpoint_name = setpoint_name_map.get(setpoint_code, "Unknown setpoint")
-            control_type = control_type_map.get(control_type_value, "Unknown control type")
+                return f"Current control type for setpoint {setpoint}: {control_type}"
+            else:
+                return "Invalid response or no response"
 
-            # Return the result as a dictionary
-            return {
-                "setpoint": setpoint_name,
-                "control_type": control_type
-            }
+        elif action == 'set':
+            if control_type not in control_type_map:
+                raise ValueError("Invalid control type. Choose between 'pressure' or 'position'.")
+
+            # Use the set_command_map for the set command
+            command_code = set_command_map[setpoint]
+
+            # Find the corresponding value for the control type (0 for position, 1 for pressure)
+            control_type_value = control_type_map[control_type]
+
+            # Send the command to set the control type
+            self.send_command(f'{command_code}{control_type_value}')
+
+            return f"Control type for setpoint {setpoint} set to {control_type}"
+
         else:
-            return "Invalid response or no response"
+            raise ValueError("Invalid action. Use 'check' or 'set'.")
 
 
     def pressure_request(self):
@@ -262,25 +284,109 @@ class PressureControls:
         Request the current pressure value from the pressure controller.
 
         Returns:
-        float: The current pressure value in the pressure units.
+        str: The current pressure value converted to the appropriate pressure units.
         """
         # Send the R30 command to request the pressure value
         response = self.send_request('R5', 'P')
-        pressure_units = self.pressure_units_request()
-
+        pressure_unit = self.pressure_units('check')
 
         # Strip any CRLF characters
         response = response.strip()
 
         if response.startswith('P'):
-            # Extract the value after the 'A' part
+            # Extract the percentage value after the 'P' character
             percentage_value = float(response[1:])
 
-            # Calculate the actual pressure value based on the sensor range
+            # Calculate the actual pressure value based on the sensor range in percentage
             actual_value = (percentage_value / 100.0) * self.sensor_range
-            return "{:.2f} {}".format(actual_value, pressure_units)
+
+            # Conversion factors from 'Torr' (since the default is % F.S. of Torr)
+            conversion_factors = {
+                'Torr': 1,            # No conversion needed
+                'mTorr': 1000,        # 1 Torr = 1000 mTorr
+                'mbar': 1.33322,      # 1 Torr ≈ 1.33322 mbar
+                'µbar': 1.33322e3,    # 1 Torr ≈ 1333.22 µbar
+                'kPa': 0.133322,      # 1 Torr ≈ 0.133322 kPa
+                'Pa': 133.322,        # 1 Torr ≈ 133.322 Pa
+                'cmH₂O': 1.35951,     # 1 Torr ≈ 1.35951 cmH₂O
+                'inH₂O': 0.53524      # 1 Torr ≈ 0.53524 inH₂O
+            }
+
+            # Perform the conversion based on the pressure unit
+            if pressure_unit in conversion_factors:
+                converted_value = actual_value * conversion_factors[pressure_unit]
+            else:
+                return "Unknown pressure unit, no conversion applied"
+
+            # Return the converted value formatted with the correct units
+            return "{:.2f} {}".format(converted_value, pressure_unit)
         else:
-            return "Invalid response or no response"        
+            return "Invalid response or no response"
+        
+    def valve_position(self):
+        """
+        Request the current valve position from the controller.
+
+        Returns:
+            str: The current valve position as a percentage open.
+        """
+        # Send the R6 command to request the valve position
+        response = self.send_request('R6', 'V')
+
+        # Strip any CRLF characters
+        response = response.strip()
+
+        if response.startswith('V'):
+            # Extract the value after the 'V' (which is the percentage open)
+            valve_position_percentage = float(response[1:])
+
+            return f"Valve position: {valve_position_percentage}% open"
+        else:
+            return "Invalid response or no response"
+        
+    def open_valve(self):
+        """
+        Send a command to open the valve.
+
+        This function sends the 'O' command to the controller to open the valve.
+
+        Returns:
+            str: Confirmation message indicating that the valve is being opened.
+        """
+        # Send the command to open the valve
+        self.send_command('O')
+
+        return "Command sent: Open valve"
+
+    def close_valve(self):
+        """
+        Send a command to close the valve.
+
+        This function sends the 'C' command to the controller to close the valve.
+
+        Returns:
+            str: Confirmation message indicating that the valve is being closed.
+        """
+        # Send the command to close the valve
+        self.send_command('C')
+
+        return "Command sent: Close valve"
+    
+    def hold_valve(self):
+        """
+        Send a command to hold the valve position.
+
+        This function sends the 'H' command to the controller to hold the valve in its current position.
+
+        Returns:
+            str: Confirmation message indicating that the valve position is being held.
+        """
+        # Send the command to hold the valve position
+        self.send_command('H')
+
+        return "Command sent: Hold valve"
+
+
 
     def sensor_range_request(self):
 
@@ -334,45 +440,135 @@ class PressureControls:
         else:
             return "Invalid response or no response"
 
-    def pressure_units_request(self):
+    def pressure_units(self, action, unit_value=None):
         """
-        Request the pressure units of the pressure controller.
+        Check or set the pressure units of the pressure controller.
+
+        Args:
+            action (str): 
+                'check' to retrieve the current pressure unit of the controller.
+                'set' to change the pressure unit of the controller.
+            unit_value (str, optional): 
+                The desired pressure unit to set when action is 'set'. 
+                Available pressure units:
+                    - 'Torr': Torr (Code: 0)
+                    - 'mTorr': Millitorr (Code: 1)
+                    - 'mbar': Millibar (Code: 2)
+                    - 'µbar': Microbar (Code: 3)
+                    - 'kPa': Kilopascal (Code: 4)
+                    - 'Pa': Pascal (Code: 5)
+                    - 'cmH₂O': Centimeters of Water (Code: 6)
+                    - 'inH₂O': Inches of Water (Code: 7)
 
         Returns:
-        str: The pressure units of the pressure controller.
+            str: 
+                - The current pressure unit if action is 'check'.
+                - A confirmation message after successfully setting the pressure unit if action is 'set'.
+                - An error message if an invalid response is received from the controller.
+            
+        Raises:
+            ValueError: If an invalid unit_value is provided when using 'set' action.
+            ValueError: If an invalid action is provided (not 'check' or 'set').
+
+        Notes:
+            - When setting the pressure unit, the following codes will be sent to the controller:
+                - 'Torr' -> F0
+                - 'mTorr' -> F1
+                - 'mbar' -> F2
+                - 'µbar' -> F3
+                - 'kPa' -> F4
+                - 'Pa' -> F5
+                - 'cmH₂O' -> F6
+                - 'inH₂O' -> F7
+            - The F command merely assigns a label to the pressure units. It does not convert pressure readings.
         """
-        # Send the R34 command to request the pressure units
-        response = self.send_request('R34', 'F')
+        # Pressure unit map based on the table
+        pressure_unit_map = {
+            '00': 'Torr',
+            '01': 'mTorr',
+            '02': 'mbar',
+            '03': 'µbar',
+            '04': 'kPa',
+            '05': 'Pa',
+            '06': 'cmH₂O',
+            '07': 'inH₂O'
+        }
 
-        # Strip any CRLF characters
-        response = response.strip()
+        # Reverse map for setting pressure units (from unit name to code)
+        reverse_pressure_unit_map = {value: str(int(key)) for key, value in pressure_unit_map.items()}
+    
+        if action == 'check':
 
-        if response.startswith('F'):
-            # Extract the value code after the 'F'
-            value_code = response[1:3]
+            # Send the R34 command to request the pressure units
+            response = self.send_request('R34', 'F')
 
-            # Map the value code to the corresponding pressure unit
-            pressure_unit_map = {
-                '00': 'Torr',
-                '01': 'mTorr',
-                '02': 'mbar',
-                '03': 'µbar',
-                '04': 'kPa',
-                '05': 'Pa',
-                '06': 'cmH₂O',
-                '07': 'inH₂O'
-            }
+            # Strip any CRLF characters
+            response = response.strip()
 
-            # Get the pressure unit based on the value code
-            pressure_unit = pressure_unit_map.get(value_code, None)
+            if response.startswith('F'):
+                # Extract the value code after the 'F'
+                value_code = response[1:3]
 
-            if pressure_unit is not None:
-                return pressure_unit
+                # Get the pressure unit based on the value code
+                pressure_unit = pressure_unit_map.get(value_code, None)
+
+                if pressure_unit is not None:
+                    return f"{pressure_unit}"
+                else:
+                    return "Invalid pressure unit value"
             else:
-                return "Invalid pressure unit value"
+                return "Invalid response or no response"
+
+        elif action == 'set':
+            if unit_value not in reverse_pressure_unit_map:
+                raise ValueError(f"Invalid pressure unit. Choose from: {list(reverse_pressure_unit_map.keys())}")
+
+            # Find the code corresponding to the pressure unit (e.g., 'Torr' -> '0')
+            value_code = reverse_pressure_unit_map[unit_value]
+
+            # Send the command to set the pressure unit without leading zeros (e.g., F0 for Torr)
+            self.send_command(f'F{value_code}')
+
+            return f"Pressure unit set to {unit_value}"
+
         else:
-            return "Invalid response or no response"
+            raise ValueError("Invalid action. Use 'check' or 'set'.")
+
+    def select_setpoint(self, setpoint):
+        """
+        Select the current setpoint for the controller.
+
+        Args:
+            setpoint (str): The setpoint identifier to select. 
+                            Must be one of the following: 'A', 'B', 'C', 'D', 'E', or 'analog'.
+
+        Returns:
+            str: Confirmation message indicating that the setpoint was selected.
         
+        Raises:
+            ValueError: If an invalid setpoint is provided.
+        """
+        # Map setpoint labels to the corresponding RS-232 command
+        setpoint_map = {
+            'A': 'D1',
+            'B': 'D2',
+            'C': 'D3',
+            'D': 'D4',
+            'E': 'D5',
+            'analog': 'D6'
+        }
+
+        # Validate the provided setpoint
+        if setpoint not in setpoint_map:
+            raise ValueError("Invalid setpoint. Choose between 'A', 'B', 'C', 'D', 'E', or 'analog'.")
+
+        # Send the command to select the setpoint
+        command = setpoint_map[setpoint]
+        self.send_command(command)
+
+        return f"Setpoint {setpoint} selected"
+
+
     def active_setpoint_request(self):
         """
         Request the currently active set point from the pressure controller and interpret the response.
@@ -568,7 +764,7 @@ class PressureControls:
         """
         if action == 'set':
             if value not in [0, 1]:
-                raise ValueError("Invalid value. Choose 0 for 100% or 1 for 10% of the transducer's range.")
+                raise ValueError(f"Invalid value. Choose 0 for 100% or 1 for 10% of the transducer's range.")
             # Send the command to set the full scale level
             command = f'S6{value}'
             self.send_command(command)
@@ -591,7 +787,7 @@ class PressureControls:
             raise ValueError("Invalid action. Use 'set' or 'check'.")
 
 
-    # Leadand Gain Parameters for PID Control
+    # Lead and Gain Parameters for PID Control
     def lead_gain_parameters(self, action, parameter_type=None, setpoint=None, value=None):
         """
         Manage lead and gain parameters for PID control.
