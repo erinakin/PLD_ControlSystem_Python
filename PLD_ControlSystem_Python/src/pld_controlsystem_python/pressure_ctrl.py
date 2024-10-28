@@ -190,6 +190,98 @@ class PressureControls:
         else:
             return "Invalid response or no response"
         
+    def setpoint_value(self, action, setpoint, value=None, control_type=None):
+        """
+        Request or set the setpoint value for a specific setpoint on the pressure controller.
+
+        Args:
+            action (str): 'request' to get the current setpoint value, 'set' to set a new setpoint value.
+            setpoint (str): The setpoint identifier ('A', 'B', 'C', 'D', or 'E').
+            value (float, optional): The new setpoint value to set. Required when action is 'set'.
+            control_type (str, optional): The control type ('pressure' or 'position'). Required when action is 'set'.
+
+        Returns:
+            float or str: The requested setpoint value if action is 'request'.
+                        Confirmation message if action is 'set'.
+
+        Raises:
+            ValueError: If action, setpoint, or control_type is invalid, or if value is missing for 'set' action.
+        """
+        # Ensure valid action
+        if action not in ['request', 'set']:
+            raise ValueError("Invalid action. Use 'request' or 'set'.")
+
+        # Map setpoints to corresponding RS-232 commands
+        setpoint_map = {
+            'A': 'S1',
+            'B': 'S2',
+            'C': 'S3',
+            'D': 'S4',
+            'E': 'S5'
+        }
+
+        if setpoint not in setpoint_map:
+            raise ValueError("Invalid setpoint. Choose between 'A', 'B', 'C', 'D', or 'E'.")
+
+        # Request current setpoint value
+        if action == 'request':
+            return self.setpoint_value_request(setpoint)
+
+        # Set new setpoint value
+        elif action == 'set':
+            if value is None:
+                raise ValueError("You must provide a setpoint value when action is 'set'.")
+            
+            # Ensure control type is specified and valid
+            if control_type not in ['pressure', 'position']:
+                raise ValueError("Invalid control_type. Use 'pressure' or 'position'.")
+            
+            # Get the full scale based on control type
+            full_scale = self.sensor_range_request()
+
+            # If control_type is 'pressure', convert value to percentage of full scale
+            if control_type == 'pressure':
+                current_unit = self.pressure_units('check')
+                # Apply unit conversion if necessary (conversion function can be defined separately)
+                value = self.convert_pressure_to_percentage(value, current_unit, full_scale)
+
+            # Calculate percentage of full scale for position
+            percentage_value = (value / full_scale) * 100 if control_type == 'position' else value
+
+            # Send the command to set the setpoint value
+            command = f"{setpoint_map[setpoint]}{int(percentage_value)}"
+            self.send_command(command)
+            return f"Setpoint {setpoint} set to {percentage_value:.2f}% of F.S."
+
+    def convert_pressure_to_percentage(self, pressure, unit, full_scale):
+        """
+        Convert pressure value to percentage of full scale based on the unit.
+
+        Args:
+            pressure (float): Pressure value to convert.
+            unit (str): Current unit of the pressure controller.
+            full_scale (float): Full scale value of the sensor.
+
+        Returns:
+            float: Converted pressure as a percentage of full scale.
+        """
+        conversion_factors = {
+            'Torr': 1,
+            'mTorr': 1e-3,
+            'mbar': 0.750062,
+            'Pa': 0.00750062,
+            'kPa': 7.50062,
+            # Add more units as necessary
+        }
+        
+        if unit not in conversion_factors:
+            raise ValueError("Unsupported unit for pressure conversion.")
+        
+        # Convert to Torr if needed, then calculate percentage of full scale
+        torr_value = pressure * conversion_factors[unit]
+        percentage = (torr_value / full_scale) * 100
+        return percentage
+
 
     def setpoint_controltype(self, action, setpoint, control_type=None):
         """
