@@ -16,7 +16,7 @@ available_ports = [port.device for port in list_ports.comports()]
 # Note: The default COM Port is set to 'COM6' for the vacuum controller
 com_port_selector = pn.widgets.Select(name='', options=available_ports, value=available_ports[0] if available_ports else 'COM6')
 address_input = pn.widgets.FloatInput(name='Address of unit', value=1, step=1)
-start_button = pn.widgets.Button(name='Start Connection', button_type='primary')
+start_button = pn.widgets.Button(name='Start Connection', button_type='success')
 stop_button = pn.widgets.Button(name='STOP', button_type='danger', width=100)
 
 pressure_display = pn.widgets.StaticText(name='Current Pressure', value="---")
