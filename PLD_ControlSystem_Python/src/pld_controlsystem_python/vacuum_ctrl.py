@@ -1,15 +1,11 @@
 import serial
+from serial.tools import list_ports
 from PLD_ControlSystem_Python.src.pld_controlsystem_python.pfeiffer_vacuum_protocol import PfeifferVacuumProtocol as pvp
 
 class VacuumControls:
     def __init__(self, port=None, baudrate=9600, address=1):
         """
         Initializes the VacuumControls class with the specified serial port and baudrate.
-
-        Parameters:
-        port (str): The serial port to which the device is connected (e.g., 'COM3' or '/dev/ttyUSB0').
-        baudrate (int): The baud rate for the serial communication (default is 9600).
-        address (int): The address of the device (default is 1).
         """
         self.ser = serial.Serial(port, baudrate, timeout=1)
         self.address = address
@@ -29,7 +25,7 @@ class VacuumControls:
         try:
             self.pressure_hpa = pvp.read_pressure(self.ser, self.address)
             self.pressure_torr = self.pressure_hpa / 1.33322  # Convert hPa to Torr
-            return print(self.pressure_hpa, 'hPa', self.pressure_torr, 'Torr') # Return the pressure in hPa and Torr
+            return self.pressure_hpa, 'hPa', self.pressure_torr, 'Torr' # Return the pressure in hPa and Torr
         except ValueError:
             return None, None
 
@@ -108,6 +104,29 @@ class VacuumControls:
                     return str(e)
             else:
                 raise ValueError("Correction factor out of range. Must be between 0.2 and 8.0.")
+
+    @staticmethod
+    def find_vacuum_controller_port(baudrate=9600, address=1):
+        """
+        Checks each available serial port to find the correct one for the Pfeiffer vacuum controller.
+
+        Parameters:
+        baudrate (int): The baud rate for the serial communication (default is 9600).
+        address (int): The address of the device (default is 1).
+
+        Returns:
+        str: The port name if found, else None.
+        """
+        for port_info in list_ports.comports():
+            try:
+                with serial.Serial(port_info.device, baudrate, timeout=1) as ser:
+                    vacuum_control = VacuumControls(port=port_info.device, baudrate=baudrate, address=address)
+                    pressure = vacuum_control.read_pressure()[0]  # Get the pressure in hPa
+                    if pressure is not None: #and isinstance(pressure, (int, float)):
+                        return port_info.device
+            except (serial.SerialException, ValueError):
+                continue
+        return None
 
     def close(self):
         """
