@@ -182,8 +182,8 @@ def create_flow_controller_tab(com_port, unit):
     return tab_layout
 
 # Set default COM ports
-default_com_port1 = 'COM12' if 'COM12' in get_available_com_ports() else 'COM1'
-default_com_port2 = 'COM13' if 'COM13' in get_available_com_ports() else 'COM2'
+default_com_port1 = 'COM15' if 'COM15' in get_available_com_ports() else 'COM1'
+default_com_port2 = 'COM16' if 'COM16' in get_available_com_ports() else 'COM2'
 
 # Create com port selectors
 com_port_selector1 = pn.widgets.Select(name='COM Port', options=get_available_com_ports(), value=default_com_port1)

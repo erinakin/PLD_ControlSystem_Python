@@ -8,8 +8,8 @@ from __future__ import annotations
 import asyncio
 from typing import Any, ClassVar
 
-from PLD_ControlSystem_Python.src.pld_controlsystem_python.util import Client, SerialClient, TcpClient, _is_float
-
+# from PLD_ControlSystem_Python.src.pld_controlsystem_python.util import Client, SerialClient, TcpClient, _is_float
+from util import Client, SerialClient, TcpClient, _is_float
 
 class FlowMeter:
     """Python driver for Alicat Flow Meters.
