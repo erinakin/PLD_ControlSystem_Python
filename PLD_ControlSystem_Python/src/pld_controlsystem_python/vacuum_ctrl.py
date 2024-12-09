@@ -1,6 +1,7 @@
 import serial
 from serial.tools import list_ports
-from PLD_ControlSystem_Python.src.pld_controlsystem_python.pfeiffer_vacuum_protocol import PfeifferVacuumProtocol as pvp
+#from PLD_ControlSystem_Python.src.pld_controlsystem_python.pfeiffer_vacuum_protocol import PfeifferVacuumProtocol as pvp
+from pfeiffer_vacuum_protocol import PfeifferVacuumProtocol as pvp
 
 class VacuumControls:
     def __init__(self, port=None, baudrate=9600, address=1):
