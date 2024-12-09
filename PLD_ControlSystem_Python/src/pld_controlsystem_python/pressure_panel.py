@@ -1,28 +1,27 @@
 import panel as pn
 from pressure_ctrl import PressureControls
+from serial.tools import list_ports
 
 # Initialize Panel
 pn.extension()
 
-# Initialize the control instance
-controller = PressureControls(port='COM1', baudrate=9600)
+controller = None
 
 # Section 1: Connection & Status
+available_ports = [port.device for port in list_ports.comports()]
+com_port_selector = pn.widgets.Select(name='COM Port', options=available_ports, value= 'COM12' if available_ports else available_ports[0])
 connect_button = pn.widgets.Button(name="Connect", button_type="primary")
 disconnect_button = pn.widgets.Button(name="Disconnect", button_type="danger")
 connection_status = pn.pane.Markdown("Status: Disconnected")
 
 def connect(event):
-        # Close the controller if already connected
+    global controller
     try:
-        controller.close()
+        controller = PressureControls(port=com_port_selector.value)
+        connection_status.object = "<div style='color:green'><strong>Serial connection established successfully!</strong></div>"
     except Exception as e:
-        # Print or log the exception if needed; it might indicate no previous connection was open
-        print("Controller was not previously connected or already closed:", e)
-        
-    # Initialize a new connection
-    controller.__init__(port='COM1', baudrate=9600)
-    connection_status.object = "Status: Connected"
+        connection_status.object = f"<div style='color:red'><strong>Error:</strong> {str(e)}</div>"
+
 
 def disconnect(event):
     controller.close()
@@ -46,6 +45,7 @@ status_button.on_click(update_status_display)
 
 connection_status_section = pn.Column(
     pn.pane.HTML("<h3 style='font-weight: bold; font-size: 16px;'>Connection & Status</h3>"),
+    com_port_selector,
     pn.Row(connect_button, disconnect_button),
     connection_status,
     pn.Row(software_version_button, software_version_display),

@@ -119,7 +119,7 @@ class VacuumControls:
         """
         for port_info in list_ports.comports():
             try:
-                with serial.Serial(port_info.device, baudrate, timeout=1) as ser:
+                with serial.Serial(port_info.device, baudrate, timeout=1) as _ser:
                     vacuum_control = VacuumControls(port=port_info.device, baudrate=baudrate, address=address)
                     pressure = vacuum_control.read_pressure()[0]  # Get the pressure in hPa
                     if pressure is not None: #and isinstance(pressure, (int, float)):
