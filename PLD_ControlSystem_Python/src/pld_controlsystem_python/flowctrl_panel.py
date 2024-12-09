@@ -13,7 +13,7 @@ def get_available_com_ports():
 # Function to initialize a flow controller
 async def initialize_flow_controller(com_port, unit):
     controller = FlowController(address=com_port, unit=unit)
-    flow_controller_name = f"Alicat Flow Controller"
+    flow_controller_name = f"Alicat Flow Controller {com_port}"
     await controller.get()  # Dummy call to initialize the controller
     return controller, flow_controller_name
 
@@ -63,7 +63,7 @@ def create_flow_controller_tab(com_port, unit):
     # Widgets specific to each tab
     status = pn.widgets.StaticText(value="Disconnected")
     name_display = pn.widgets.StaticText(value="Name: N/A")
-
+    
     # Measurement displays
     displays = {
         'pressure': pn.widgets.StaticText(value="Pressure: N/A"),
@@ -74,14 +74,23 @@ def create_flow_controller_tab(com_port, unit):
         'gas': pn.widgets.StaticText(value="Gas: N/A")
     }
 
-    # Control point selection
+    # Control point selection, control buttons and update task
     control_point_selector = pn.widgets.Select(name='Control Point', options=['mass flow', 'vol flow', 'abs pressure', 'gauge pressure', 'diff pressure'])
     control_point_display = pn.widgets.StaticText(value="Control Point: N/A")
-    
+    update_task = None
+    auto_update_toggle = pn.widgets.Toggle(name="Auto Update", button_type="primary")
+
+
     # Setpoint input
     setpoint_input = pn.widgets.FloatInput(name='Setpoint', value=0.0, step=0.01)
     setpoint_display = pn.widgets.StaticText(value="Current Setpoint: N/A")
     controller = None
+
+    # Async function to start periodic updates
+    async def periodic_update():
+        while auto_update_toggle.value:
+            await update_display(controller, displays)
+            await asyncio.sleep(0.5)
     
     # Callback to start the device
     async def start_device(event):
@@ -89,7 +98,7 @@ def create_flow_controller_tab(com_port, unit):
         status.value = "Connecting..."
         controller, name = await initialize_flow_controller(com_port, unit)
         status.value = "Connected"
-        name_display.value = f"Name: {name}"
+        name_display.value = f"Name:{name}"
         await update_display(controller, displays)
 
     # Callback to stop the device
@@ -106,6 +115,20 @@ def create_flow_controller_tab(com_port, unit):
             controller = None
         else:
             status.value = "Controller not initialized"
+
+     # Start and stop auto-update based on toggle state
+    def toggle_auto_update(event):
+        nonlocal update_task
+        if auto_update_toggle.value:
+            auto_update_toggle.button_type = "success"  # Green when updating
+            update_task = asyncio.create_task(periodic_update())
+        else:
+            if update_task:
+                update_task.cancel()
+            auto_update_toggle.button_type = "danger"  # Red when not updating
+            update_task = None
+
+    auto_update_toggle.param.watch(toggle_auto_update, 'value')
 
     # Callback to set the control point
     async def confirm_control_point(event):
@@ -146,7 +169,7 @@ def create_flow_controller_tab(com_port, unit):
         setpoint_button,
         setpoint_display)
         ),
-
+        auto_update_toggle,
         displays['pressure'],
         displays['temperature'],
         displays['volumetric_flow'],

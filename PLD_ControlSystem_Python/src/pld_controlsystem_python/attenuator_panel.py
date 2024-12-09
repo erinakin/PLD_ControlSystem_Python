@@ -156,7 +156,7 @@ pn.extension()
 
 # UI components
 available_ports = [port.device for port in list_ports.comports()]
-com_port = pn.widgets.Select(name='', options=available_ports, value=available_ports[0] if available_ports else 'COM5')
+com_port = pn.widgets.Select(name='', options=available_ports, value='COM8' if available_ports else available_ports[0])
 start_button = pn.widgets.Button(name='Start', button_type='success')
 home_button = pn.widgets.Button(name='Home Attenuator', button_type='primary')
 angle_input = pn.widgets.FloatInput(name='', value=0, step=1, start=0, end=360)
