@@ -9,7 +9,7 @@ controller = None
 
 # Section 1: Connection & Status
 available_ports = [port.device for port in list_ports.comports()]
-com_port_selector = pn.widgets.Select(name='COM Port', options=available_ports, value= 'COM12' if available_ports else available_ports[0])
+com_port_selector = pn.widgets.Select(name='COM Port', options=available_ports, value= 'COM7' if available_ports else available_ports[0])
 connect_button = pn.widgets.Button(name="Connect", button_type="primary")
 disconnect_button = pn.widgets.Button(name="Disconnect", button_type="danger")
 connection_status = pn.pane.Markdown("Status: Disconnected")

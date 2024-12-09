@@ -12,7 +12,7 @@ action_status = pn.pane.Markdown('', width=300)
 
 # Define GUI components
 available_ports = [port.device for port in list_ports.comports()]
-com_port_selector = pn.widgets.Select(name='COM Port', options=available_ports, value=available_ports[0] if available_ports else 'COM7')
+com_port_selector = pn.widgets.Select(name='COM Port', options=available_ports, value='COM10' if available_ports else available_ports[0])
 
 start_button = pn.widgets.Button(name='Start Connection', button_type='primary')
 

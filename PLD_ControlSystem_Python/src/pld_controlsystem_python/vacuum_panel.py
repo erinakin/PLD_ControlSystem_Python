@@ -17,7 +17,7 @@ available_ports = [port.device for port in list_ports.comports()]
 
 
 # Set the default COM Port to the found port or use a fallback
-com_port_selector = pn.widgets.Select(name='', options=available_ports, value='COM6' if available_ports else available_ports[0])
+com_port_selector = pn.widgets.Select(name='', options=available_ports, value='COM5' if available_ports else available_ports[0])
 address_input = pn.widgets.FloatInput(name='Address of unit', value=1, step=1)
 start_button = pn.widgets.Button(name='Start Connection', button_type='success')
 stop_button = pn.widgets.Button(name='STOP', button_type='danger', width=100)
