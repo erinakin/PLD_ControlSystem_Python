@@ -22,7 +22,7 @@ class  TargetControls:
         self.ser = serial.Serial(port, baudrate, timeout=timeout)
         self.port = port
         self.current_target = 0
-        self.current_raster_speed = 0
+        self.current_raster_speed = 20
         self.rotation_speed = 0
 
     def send_command(self, command):
@@ -40,12 +40,13 @@ class  TargetControls:
         """
         Rotate target on carousel to a specified angle.
 
-        :param angle: The angle to rotate to.
+        :param angle: The angle to rotate to. 
+        The limits of the angle are between 0 to 360 degrees.
         """
         #Convert possible float angle to nearest integer angle 
         angle_int = round(angle)        
 
-        command = f',{angle_int}\n'
+        command = f't{angle_int}\n'
         self.send_command(command)
 
     def step_raster_cw(self):
@@ -72,13 +73,14 @@ class  TargetControls:
     def set_raster_speed(self,speed):
         """
         Set the raster speed.
+        The limits of the rotation speed 0.1 to 90 deg/s.
 
         :param speed: The raster speed in degrees per second.
         
         """
         # Convert possible float speed to nearest integer speed
         rasterSpeed_int = round(speed)
-        command = f"'{rasterSpeed_int}\n"
+        command = f"!{rasterSpeed_int}\n"
         self.send_command(command)
         self.current_raster_speed = rasterSpeed_int
 
@@ -159,7 +161,7 @@ class  TargetControls:
             return
 
         self.current_target = target 
-        command = f"t{target_serial}\n"
+        command = f",{target_serial}\n"
         self.send_command(command)
 
     def close(self):

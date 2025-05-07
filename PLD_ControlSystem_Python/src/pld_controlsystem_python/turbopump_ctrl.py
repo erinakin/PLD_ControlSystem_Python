@@ -2,8 +2,8 @@ import serial
 
 
 # from serial.tools import list_ports
-from PLD_ControlSystem_Python.src.pld_controlsystem_python.pfeiffer_turbopump_protocol import PfeifferTurbopumpProtocol as ptp
-
+#from PLD_ControlSystem_Python.src.pld_controlsystem_python.pfeiffer_turbopump_protocol import PfeifferTurbopumpProtocol as ptp
+from pfeiffer_turbopump_protocol import PfeifferTurbopumpProtocol as ptp
 
 class TurbopumpControls:
     def __init__(self, port, baudrate=9600, timeout=1, address=1):

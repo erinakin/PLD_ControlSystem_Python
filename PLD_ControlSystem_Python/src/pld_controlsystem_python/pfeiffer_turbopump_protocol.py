@@ -7,7 +7,7 @@ class InvalidCharError(Exception):
 
 
 class PfeifferTurbopumpProtocol:
-    _filter_invalid_char = False
+    _filter_invalid_char = True
 
     @classmethod
     def enable_valid_char_filter(cls):
@@ -93,6 +93,9 @@ class PfeifferTurbopumpProtocol:
 
             if c == b"\r":
                 break
+
+        print(f"Raw response: {r}")
+        print(f"Response length: {len(r)}")
 
         if len(r) < 14:
             raise ValueError("pump response too short to be valid")
