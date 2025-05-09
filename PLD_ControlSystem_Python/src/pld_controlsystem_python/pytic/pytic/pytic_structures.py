@@ -1,4 +1,4 @@
-from ctypes import *
+from ctypes import Structure, c_uint8, c_int8, c_char_p, c_ulong, POINTER, c_bool, c_uint16, c_int32, c_uint32, c_int16, c_size_t
 from .pytic_protocol import tic_constant as t_const
 
 class libusbp_generic_interface(Structure):
@@ -71,6 +71,7 @@ class tic_settings(Structure):
                 ('current_limit_during_error', c_int32),
                 ('step_mode', c_uint8),
                 ('decay_mode', c_int8),
+                ('agc_mode', c_uint8),
                 ('starting_speed', c_uint32),
                 ('max_speed', c_uint32),
                 ('max_decel', c_uint32),
@@ -108,6 +109,7 @@ class tic_variables(Structure):
                 ('step_mode', c_uint8),
                 ('current_limit_code', c_uint8),
                 ('decay_mode', c_uint8),
+                ('agc_mode', c_uint8),
                 ('input_state', c_uint8),
                 ('input_after_averaging', c_uint16),
                 ('input_after_hysteresis', c_uint16),

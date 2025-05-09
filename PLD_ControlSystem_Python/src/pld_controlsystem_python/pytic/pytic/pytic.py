@@ -1,10 +1,8 @@
-import sys
 import os
 import yaml
-from ctypes import *
-from time import sleep
+from ctypes import windll, POINTER, c_int32, c_uint32, c_uint8, c_size_t, c_bool, c_char_p, byref, cast
 from .pytic_protocol import tic_constant as tc
-from .pytic_structures import *
+from .pytic_structures import tic_error, tic_device, tic_handle, tic_variables, tic_settings, pin_info, pin_settings
 from functools import wraps, partial
 import logging
 
