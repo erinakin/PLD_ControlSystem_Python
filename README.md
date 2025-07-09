@@ -23,3 +23,14 @@ The system is designed for flexibility, remote operation, and reproducibility in
 - 🖥️ Front-end interfaces built using the `panel` library
 - 🐳 Docker support for portable deployment
 - 📄 Device-level documentation and troubleshooting guides
+
+
+## Repository Structure
+PLD_ControlSystem_Python/
+├── src/pld_controlsystem_python
+│ ├── panels/ # Panel-based GUI interfaces
+│ └── devices/ # Individual hardware controllers
+├── docs/ # Markdown-based documentation
+├── notebooks/ # Test notebooks and demos
+├── Dockerfile # Container setup
+└── README.md
